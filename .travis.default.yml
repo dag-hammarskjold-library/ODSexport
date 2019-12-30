@@ -1,0 +1,11 @@
+# This is a default Travis CI file reflecting the basic deployment reality of this application.
+# It could be used as-is, as this app assumes it will be run in a serverless envuronment.
+# You will want to make sure Travis CI has your AWS secrets stored so you don't run into any
+# issues with deployment.
+language: python
+python:
+- 3.6
+install:
+- pip install -r requirements.txt
+script:
+- zappa update dev
