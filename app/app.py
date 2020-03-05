@@ -44,6 +44,15 @@ def date():
 
 @app.route('/<date>/xml')
 def xml(date):
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
@@ -68,7 +77,7 @@ def xml(date):
     )
     print(query.to_json())
     #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1})
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
     #return_data=bibset.to_xml()
     #print(f"the number of records is {str(bibset.count)}")
     xml=bibset.to_xml()
@@ -154,7 +163,15 @@ def unbis():
     #print(f"the str_date is {str_date}")
     #q=current_time.year+current_time.month+current_time.day
     #else:
-        
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")    
     query = QueryDocument(
         Condition(
             tag='035',
@@ -165,7 +182,8 @@ def unbis():
     )
     print(query.to_json())
     #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
-    authset = AuthSet.from_query(query, projection={'035':1,'150':1,'995':1,'996':1,'997':1, '993':1,'994':1})
+    #authset = AuthSet.from_query(query, projection={'035':1,'150':1,'995':1,'996':1,'997':1, '993':1,'994':1}, skip=skp, limit=limt)
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
     #return_data=bibset.to_xml()
     #print(f"the number of records is {str(bibset.count)}")
     unbis=authset.to_xml()
