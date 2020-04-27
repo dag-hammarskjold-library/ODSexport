@@ -1,12 +1,12 @@
 # ODS Export
 
-/<date>/xml for marc xml output
+//<date>/xml for marc xml output
   
-/<date>/symbols for text ouput
+//<date>/symbols for text ouput
   
-/<date>/json for json ouput
+//<date>/json for json ouput
   
-/unbis for T codes lookup table -> ~7500 records
+//unbis for T codes lookup table -> ~7500 records
   
  <date> format is yyyymmdd or yyyy-mm-dd
   
