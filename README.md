@@ -14,4 +14,4 @@
   
  if \<date\> is less than optimal it defaults to today
  
- use 'skip' and 'limit' url parameters for pagination. e.g. ?limit=64
+ use 'skip' and 'limit' url parameters for pagination; default values: skip=0&limit=50; e.g. ?limit=64
