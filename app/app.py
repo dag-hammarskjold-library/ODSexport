@@ -14,7 +14,8 @@ import json
 # Initialize your application.
 app = Flask(__name__)
 if __name__ == "__main__":
-    app.run(host='10.240.200.141', port=8000)
+    #app.run(host='10.240.200.141', port=8000)
+    pass
 
 DB.connect(Config.connect_string)
 collection = Config.DB.bibs
@@ -116,6 +117,7 @@ def jsonf(date):
     #json=bibset.to_json()
     #return Response(json, mimetype='text/json')
     return jsonify(jsonl)
+
 @app.route('/<date>/symbols')
 def symbols(date):
     str_date=date.replace('-','')
@@ -188,3 +190,46 @@ def unbis():
     #print(f"the number of records is {str(bibset.count)}")
     unbis=authset.to_xml()
     return Response(unbis, mimetype='text/xml')
+
+
+@app.route('/<date>/S')
+def jsons(date):
+    str_date=date.replace('-','')
+    print(f"the original str_date is {str_date}")
+    if len(str_date)!= 8:
+        date = datetime.datetime.now()
+        str_date=str(date.year)+str(date.month)+str(date.day)
+    print(f"the str_date is {str_date}")
+    #q=current_time.year+current_time.month+current_time.day
+    #else:
+        
+    query = QueryDocument(
+        Condition(
+            tag='999',
+            #subfields={'z': re.compile('^'+q)}
+            subfields={'b': re.compile('^'+str_date)}
+        ),
+        Condition(
+            tag='191',
+            #subfields={'z': re.compile('^'+q)}
+            subfields={'b': re.compile('^S')}
+        )
+    )
+    export_fields={'089':1,'191': 1,'239':1,'245':1,'249':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'650':1,'651':1,'710':1,'991':1,'993':1}
+    #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
+    bibset = BibSet.from_query(query, projection=export_fields)
+    #return_data=bibset.to_xml()
+    #print(f"the number of records is {str(bibset.count)}")
+    out_list=[('089','b'),('191','a'),('191','c'),('239','a'),('245','a'),('249','a'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('650','a'),('651','a'),('710','a'),('991','d'),('993','a')]
+
+    jsonl=[]
+    
+    for bib in bibset.records:
+        out_dict={}
+        #print('id: {}, symbol: {}'.format(bib.id, bib.get_values('191','a')))
+        for entry in out_list:
+            out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
+        jsonl.append(out_dict)
+        #jsonl.append(bib.to_json())
+    #return Response(json, mimetype='text/json')
+    return jsonify(jsonl)
