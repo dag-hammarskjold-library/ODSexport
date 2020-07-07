@@ -11,10 +11,19 @@ import datetime
 import json
 
 
+'''
+simple test URLs
+/20200707/xml?skip=10&limit=35
+/20200707/json?skip=10&limit=35
+/unbis?skip=10&limit=35
+/20200707/S?skip=10&limit=35
+/2020-07-07/S?skip=10&limit=35
+
+
+'''
 # Initialize your application.
 app = Flask(__name__)
 if __name__ == "__main__":
-    #app.run(host='10.240.200.141', port=8000)
     pass
 
 DB.connect(Config.connect_string)
@@ -22,8 +31,10 @@ collection = Config.DB.bibs
 
 # Define any classes you want to use here, or you could put
 # them in other files and import.
+
 return_data=""
-# And start building your routes.
+
+# Start building your routes.
 
 @app.route('/')
 def index():
@@ -33,7 +44,9 @@ def index():
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
-
+'''
+returns the current date - for test purposes
+'''
 @app.route('/date')
 def date():
     data={}
@@ -41,8 +54,15 @@ def date():
     data['year']=current_time.year
     data['month']=current_time.month
     data['day']=current_time.day
-    return(render_template('date.html', data=data))
-
+    return(render_template('date.html', data=return_data))
+'''
+outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+/YYYYMMDD/xml?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+if the date is in wrong format the function returns today's records
+it uses DLX bibset.to_xml serialization function to output MARCXML
+'''
 @app.route('/<date>/xml')
 def xml(date):
     try:
@@ -60,111 +80,121 @@ def xml(date):
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")
-    #q=current_time.year+current_time.month+current_time.day
-    #else:
         
     query = QueryDocument(
         Condition(
             tag='999',
-            #subfields={'z': re.compile('^'+q)}
             subfields={'b': re.compile('^'+str_date)}
-            #subfields={'z': str_date}
         ),
         Condition(
             tag='029',
-            #subfields={'z': re.compile('^'+q)}
             subfields={'a':'JN'}
         )
     )
     print(query.to_json())
     #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
-    #return_data=bibset.to_xml()
-    #print(f"the number of records is {str(bibset.count)}")
     xml=bibset.to_xml()
     return Response(xml, mimetype='text/xml')
 
+'''
+outputs records in native central DB schema json format for the date which is provided as a dynamic route inputed in YYYYMMDD or YYYY-MM-DD
+e.g. /YYYY-MM-DD/json
+e.g. /YYYYMMDD/json?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+if the date is in wrong format the function returns today's records
+it uses DLX's bibset.to_json serialization function to output json
+'''
 @app.route('/<date>/json')
 def jsonf(date):
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")
-    #q=current_time.year+current_time.month+current_time.day
-    #else:
-        
+            
     query = QueryDocument(
         Condition(
             tag='999',
-            #subfields={'z': re.compile('^'+q)}
             subfields={'b': re.compile('^'+str_date)}
         ),
         Condition(
             tag='029',
-            #subfields={'z': re.compile('^'+q)}
             subfields={'a':'JN'}
         )
     )
     #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1})
-    #return_data=bibset.to_xml()
-    #print(f"the number of records is {str(bibset.count)}")
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=skp, limit=limt)
     jsonl=[]
     for bib in bibset.records:
         jsonl.append(bib.to_json())
-    #json=bibset.to_json()
-    #return Response(json, mimetype='text/json')
     return jsonify(jsonl)
 
+
+'''
+outputs records in txt format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+e.g. /YYYYMMDD/symbols /YYYY-MM-DD/symbols?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+if the date is in wrong format the function returns today's records
+it uses DLX bibset.to_txt serialization function to output MARCXML
+'''
 @app.route('/<date>/symbols')
 def symbols(date):
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")
-    #q=current_time.year+current_time.month+current_time.day
-    #else:
+    
         
     query = QueryDocument(
         Condition(
             tag='999',
-            #subfields={'z': re.compile('^'+q)}
             subfields={'b': re.compile('^'+str_date)}
         ),
         Condition(
             tag='029',
-            #subfields={'z': re.compile('^'+q
             subfields={'a':'JN'}
         )
     )
     #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
-    bibset = BibSet.from_query(query, projection={'029':1,'191': 1})
+    bibset = BibSet.from_query(query, projection={'029':1,'191': 1}, skip=skp, limit=limt)
     str_out=''
     for bib in bibset.records:
         str_out+=bib.to_str()
-    #return_data=bibset.to_xml()
-    #print(f"the number of records is {str(bibset.count)}")
-    #str=bibset.to_str()
     return Response(str_out, mimetype='text/plain')
 
 
-
-
-    
+'''
+outputs UNBIS thesaurus subject heading records in MARCXML format /unbis?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+it uses DLX bibset.to_xml serialization function to output fields 035 and 150 in MARCXML
+'''
 @app.route('/unbis')
 def unbis():
-    #str_date=date.replace('-','')
-    #print(f"the original str_date is {str_date}")
-    #if len(str_date)!= 8:
-    #    date = datetime.datetime.now()
-    #    str_date=str(date.year)+str(date.month)+str(date.day)
-    #print(f"the str_date is {str_date}")
-    #q=current_time.year+current_time.month+current_time.day
-    #else:
     try:
         skp=int(request.args.get('skip'))
     except:
@@ -177,49 +207,53 @@ def unbis():
     query = QueryDocument(
         Condition(
             tag='035',
-            #subfields={'z': re.compile('^'+q)}
             subfields={'a': re.compile('^T')}
-            #subfields={'z': str_date}
-        )
+            )
     )
     print(query.to_json())
-    #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
-    #authset = AuthSet.from_query(query, projection={'035':1,'150':1,'995':1,'996':1,'997':1, '993':1,'994':1}, skip=skp, limit=limt)
     authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
-    #return_data=bibset.to_xml()
-    #print(f"the number of records is {str(bibset.count)}")
     unbis=authset.to_xml()
     return Response(unbis, mimetype='text/xml')
 
-
+'''
+outputs Security Council bib records in plain simple json format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+e.g. /YYYY-MM-DD/xml?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+if the date is in wrong format the function returns today's records
+it is used to publish S/ records for iSCAD+ in a plain json
+'''
 @app.route('/<date>/S')
 def jsons(date):
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")
-    #q=current_time.year+current_time.month+current_time.day
-    #else:
         
     query = QueryDocument(
         Condition(
             tag='999',
-            #subfields={'z': re.compile('^'+q)}
             subfields={'b': re.compile('^'+str_date)}
         ),
         Condition(
             tag='191',
-            #subfields={'z': re.compile('^'+q)}
-            subfields={'b': re.compile('^S')}
+            subfields={'b': re.compile('^S\/')}
         )
     )
     export_fields={'089':1,'191': 1,'239':1,'245':1,'249':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'650':1,'651':1,'710':1,'991':1,'993':1}
     #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
-    bibset = BibSet.from_query(query, projection=export_fields)
-    #return_data=bibset.to_xml()
-    #print(f"the number of records is {str(bibset.count)}")
+    bibset = BibSet.from_query(query, projection=export_fields, skip=skp, limit=limt)
     out_list=[('089','b'),('191','a'),('191','c'),('239','a'),('245','a'),('249','a'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('650','a'),('651','a'),('710','a'),('991','d'),('993','a')]
 
     jsonl=[]
@@ -230,6 +264,4 @@ def jsons(date):
         for entry in out_list:
             out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
         jsonl.append(out_dict)
-        #jsonl.append(bib.to_json())
-    #return Response(json, mimetype='text/json')
     return jsonify(jsonl)
