@@ -44,18 +44,21 @@ def index():
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
                                'favicon.ico', mimetype='image/vnd.microsoft.icon')
-'''
-returns the current date - for test purposes
-'''
 @app.route('/date')
 def date():
+    '''
+    returns the current date - for test purposes
+    '''
     data={}
     current_time = datetime.datetime.now() 
     data['year']=current_time.year
     data['month']=current_time.month
     data['day']=current_time.day
     return(render_template('date.html', data=return_data))
-'''
+
+@app.route('/<date>/xml')
+def xml(date):
+    '''
 outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
 /YYYYMMDD/xml?skip=n&limit=m
 skip=n URL parameter is used to skip n records. Default is 0.
@@ -63,8 +66,6 @@ limit=m URL parameter is used to limit number of records returned. Default is 50
 if the date is in wrong format the function returns today's records
 it uses DLX bibset.to_xml serialization function to output MARCXML
 '''
-@app.route('/<date>/xml')
-def xml(date):
     try:
         skp=int(request.args.get('skip'))
     except:
@@ -97,17 +98,18 @@ def xml(date):
     xml=bibset.to_xml()
     return Response(xml, mimetype='text/xml')
 
-'''
-outputs records in native central DB schema json format for the date which is provided as a dynamic route inputed in YYYYMMDD or YYYY-MM-DD
-e.g. /YYYY-MM-DD/json
-e.g. /YYYYMMDD/json?skip=n&limit=m
-skip=n URL parameter is used to skip n records. Default is 0.
-limit=m URL parameter is used to limit number of records returned. Default is 50.
-if the date is in wrong format the function returns today's records
-it uses DLX's bibset.to_json serialization function to output json
-'''
+
 @app.route('/<date>/json')
 def jsonf(date):
+    '''
+    outputs records in native central DB schema json format for the date which is provided as a dynamic route inputed in YYYYMMDD or YYYY-MM-DD
+    e.g. /YYYY-MM-DD/json
+    e.g. /YYYYMMDD/json?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    if the date is in wrong format the function returns today's records
+    it uses DLX's bibset.to_json serialization function to output json
+    '''
     try:
         skp=int(request.args.get('skip'))
     except:
@@ -142,16 +144,16 @@ def jsonf(date):
     return jsonify(jsonl)
 
 
-'''
-outputs records in txt format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
-e.g. /YYYYMMDD/symbols /YYYY-MM-DD/symbols?skip=n&limit=m
-skip=n URL parameter is used to skip n records. Default is 0.
-limit=m URL parameter is used to limit number of records returned. Default is 50.
-if the date is in wrong format the function returns today's records
-it uses DLX bibset.to_txt serialization function to output MARCXML
-'''
 @app.route('/<date>/symbols')
 def symbols(date):
+    '''
+    outputs records in txt format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+    e.g. /YYYYMMDD/symbols /YYYY-MM-DD/symbols?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    if the date is in wrong format the function returns today's records
+    it uses DLX bibset.to_txt serialization function to output MARCXML
+    '''
     try:
         skp=int(request.args.get('skip'))
     except:
@@ -187,14 +189,15 @@ def symbols(date):
     return Response(str_out, mimetype='text/plain')
 
 
-'''
-outputs UNBIS thesaurus subject heading records in MARCXML format /unbis?skip=n&limit=m
-skip=n URL parameter is used to skip n records. Default is 0.
-limit=m URL parameter is used to limit number of records returned. Default is 50.
-it uses DLX bibset.to_xml serialization function to output fields 035 and 150 in MARCXML
-'''
+
 @app.route('/unbis')
 def unbis():
+    '''
+    outputs UNBIS thesaurus subject heading records in MARCXML format /unbis?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    it uses DLX bibset.to_xml serialization function to output fields 035 and 150 in MARCXML
+    '''
     try:
         skp=int(request.args.get('skip'))
     except:
@@ -215,16 +218,85 @@ def unbis():
     unbis=authset.to_xml()
     return Response(unbis, mimetype='text/xml')
 
-'''
-outputs Security Council bib records in plain simple json format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
-e.g. /YYYY-MM-DD/xml?skip=n&limit=m
-skip=n URL parameter is used to skip n records. Default is 0.
-limit=m URL parameter is used to limit number of records returned. Default is 50.
-if the date is in wrong format the function returns today's records
-it is used to publish S/ records for iSCAD+ in a plain json
-'''
+
+@app.route('/tcode/<tcode>')
+def unbis_tcode(tcode):
+    '''
+    looks up UNBIS thesaurus T codes and returns matching subject heading records 
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    it uses DLX bibset.to_xml serialization function to output fields 035 and 150 in MARCXML
+    '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")    
+    query = QueryDocument(
+        Condition(
+            tag='035',
+            subfields={'a': re.compile(str(tcode).upper())}
+            )
+    )
+    print(query.to_json())
+    dict1={}
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    for auth in authset:
+        dict1[auth.get_value('035','a')]=auth.get_value('150','a')
+    #unbis=authset.to_xml()
+    #return Response(unbis, mimetype='text/xml')
+    return jsonify(dict1)
+
+
+@app.route('/label/<label>')
+def unbis_label(label):
+    '''
+    looks up UNBIS thesaurus labels and returns matching T codes 
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    it uses DLX authset to output fields 035 and 150
+    '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")    
+    query = QueryDocument(
+        Condition(
+            tag='150',
+            subfields={'a': re.compile(str(label).upper())}
+            )
+    )
+    print(query.to_json())
+    dict1={}
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    for auth in authset:
+        dict1[auth.get_value('150','a')]=auth.get_value('035','a')
+    #unbis=authset.to_xml()
+    #return Response(unbis, mimetype='text/xml')
+    return jsonify(dict1)
+
+
+
+
 @app.route('/<date>/S')
 def jsons(date):
+    '''
+    outputs Security Council bib records in plain simple json format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+    e.g. /YYYY-MM-DD/xml?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    if the date is in wrong format the function returns today's records
+    it is used to publish S/ records for iSCAD+ in a plain json
+    '''
     try:
         skp=int(request.args.get('skip'))
     except:
