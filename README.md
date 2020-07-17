@@ -17,7 +17,7 @@
  
  use 'skip' and 'limit' url parameters for pagination; default values: skip=0&limit=50; e.g. ?limit=64
  
- tocode lookup endpoints work as below:
+ 2. UNBIS Thesaurus TCode lookup endpoints work as below:
  
   - /tcode/T0000898 ; for {T0000898: "CONSUMER COOPERATIVES"}
  
