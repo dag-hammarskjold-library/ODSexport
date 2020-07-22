@@ -296,6 +296,7 @@ def jsons(date):
     limit=m URL parameter is used to limit number of records returned. Default is 50.
     if the date is in wrong format the function returns today's records
     it is used to publish S/ records for iSCAD+ in a plain json
+    22 July added fields 049:a and 260:a
     '''
     try:
         skp=int(request.args.get('skip'))
