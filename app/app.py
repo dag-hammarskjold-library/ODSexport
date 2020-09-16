@@ -80,8 +80,7 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     if len(str_date)!= 8:
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
-    print(f"the str_date is {str_date}")
-        
+    print(f"the str_date is {str_date}")     
     query = QueryDocument(
         Condition(
             tag='999',
@@ -93,9 +92,10 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
         )
     )
     print(query.to_json())
-    #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
     xml=bibset.to_xml()
+    #removing double space from the xml; creates pbs with the job number on ODS export
+    xml=xml.replace("  "," ")
     return Response(xml, mimetype='text/xml')
 
 
@@ -125,7 +125,6 @@ def jsonf(date):
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")
-            
     query = QueryDocument(
         Condition(
             tag='999',
@@ -136,8 +135,9 @@ def jsonf(date):
             subfields={'a':'JN'}
         )
     )
-    #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
+
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=skp, limit=limt)
+
     jsonl=[]
     for bib in bibset.records:
         jsonl.append(bib.to_json())
@@ -181,8 +181,9 @@ def symbols(date):
             subfields={'a':'JN'}
         )
     )
-    #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
+
     bibset = BibSet.from_query(query, projection={'029':1,'191': 1}, skip=skp, limit=limt)
+
     str_out=''
     for bib in bibset.records:
         str_out+=bib.to_str()
@@ -192,8 +193,40 @@ def symbols(date):
 
 @app.route('/unbis')
 def unbis():
+
     '''
     outputs UNBIS thesaurus subject heading records in MARCXML format /unbis?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    it uses DLX bibset.to_xml serialization function to output fields 035 and 150 in MARCXML
+    '''
+
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")    
+    query = QueryDocument(
+        Condition(
+            tag='035',
+            subfields={'a': re.compile('^T')}
+
+            )
+
+    )
+    print(query.to_json())
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    unbis=authset.to_xml()
+    return Response(unbis, mimetype='text/xml')
+
+@app.route('/tcode/<tcode>')
+def unbis_tcode(tcode):
+    '''
+    looks up UNBIS thesaurus T codes and returns matching subject heading records 
     skip=n URL parameter is used to skip n records. Default is 0.
     limit=m URL parameter is used to limit number of records returned. Default is 50.
     it uses DLX bibset.to_xml serialization function to output fields 035 and 150 in MARCXML
@@ -210,14 +243,50 @@ def unbis():
     query = QueryDocument(
         Condition(
             tag='035',
-            subfields={'a': re.compile('^T')}
+            subfields={'a': re.compile(str(tcode).upper())}
             )
     )
     print(query.to_json())
+    dict1={}
     authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
-    unbis=authset.to_xml()
-    return Response(unbis, mimetype='text/xml')
+    for auth in authset:
+        dict1[auth.get_value('035','a')]=auth.get_value('150','a')
+    #unbis=authset.to_xml()
+    #return Response(unbis, mimetype='text/xml')
+    return jsonify(dict1)
 
+
+@app.route('/label/<label>')
+def unbis_label(label):
+    '''
+    looks up UNBIS thesaurus labels and returns matching T codes 
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    it uses DLX authset to output fields 035 and 150
+    '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")    
+    query = QueryDocument(
+        Condition(
+            tag='150',
+            subfields={'a': re.compile(str(label).upper())}
+            )
+    )
+    print(query.to_json())
+    dict1={}
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    for auth in authset:
+        dict1[auth.get_value('150','a')]=auth.get_value('035','a')
+    #unbis=authset.to_xml()
+    #return Response(unbis, mimetype='text/xml')
+    return jsonify(dict1)
 
 @app.route('/tcode/<tcode>')
 def unbis_tcode(tcode):
@@ -322,19 +391,19 @@ def jsons(date):
         Condition(
             tag='191',
             subfields={'b': re.compile('^S\/')}
+
         )
     )
     export_fields={'049':1,'089':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'650':1,'651':1,'710':1,'991':1,'993':1}
-    #bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=0, limit=30)
     bibset = BibSet.from_query(query, projection=export_fields, skip=skp, limit=limt)
     out_list=[('049','a'),('089','b'),('191','a'),('191','c'),('239','a'),('245','a'),('249','a'),('260','a'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('650','a'),('651','a'),('710','a'),('991','d'),('993','a')]
+
 
     jsonl=[]
     
 
     for bib in bibset.records:
         out_dict={}
-        #print('id: {}, symbol: {}'.format(bib.id, bib.get_values('191','a')))
         for entry in out_list:
             out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
         jsonl.append(out_dict)
