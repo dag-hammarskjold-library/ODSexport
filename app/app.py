@@ -259,7 +259,7 @@ def jsons(date):
 @app.route('/votes/<topic>')
 def votes(topic):
     '''
-    looks up UNBIS thesaurus labels and returns matching T codes 
+    looks up UNBIS thesaurus labels and returns matching T codes ..
     skip=n URL parameter is used to skip n records. Default is 0.
     limit=m URL parameter is used to limit number of records returned. Default is 50.
     it uses DLX authset to output fields 035 and 150
