@@ -288,74 +288,6 @@ def unbis_label(label):
     #return Response(unbis, mimetype='text/xml')
     return jsonify(dict1)
 
-@app.route('/tcode/<tcode>')
-def unbis_tcode(tcode):
-    '''
-    looks up UNBIS thesaurus T codes and returns matching subject heading records 
-    skip=n URL parameter is used to skip n records. Default is 0.
-    limit=m URL parameter is used to limit number of records returned. Default is 50.
-    it uses DLX bibset.to_xml serialization function to output fields 035 and 150 in MARCXML
-    '''
-    try:
-        skp=int(request.args.get('skip'))
-    except:
-        skp=0
-    try:
-        limt=int(request.args.get('limit'))
-    except:
-        limt=50
-    print(f"skip is {skp} and limit is {limt}")    
-    query = QueryDocument(
-        Condition(
-            tag='035',
-            subfields={'a': re.compile(str(tcode).upper())}
-            )
-    )
-    print(query.to_json())
-    dict1={}
-    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
-    for auth in authset:
-        dict1[auth.get_value('035','a')]=auth.get_value('150','a')
-    #unbis=authset.to_xml()
-    #return Response(unbis, mimetype='text/xml')
-    return jsonify(dict1)
-
-
-@app.route('/label/<label>')
-def unbis_label(label):
-    '''
-    looks up UNBIS thesaurus labels and returns matching T codes 
-    skip=n URL parameter is used to skip n records. Default is 0.
-    limit=m URL parameter is used to limit number of records returned. Default is 50.
-    it uses DLX authset to output fields 035 and 150
-    '''
-    try:
-        skp=int(request.args.get('skip'))
-    except:
-        skp=0
-    try:
-        limt=int(request.args.get('limit'))
-    except:
-        limt=50
-    print(f"skip is {skp} and limit is {limt}")    
-    query = QueryDocument(
-        Condition(
-            tag='150',
-            subfields={'a': re.compile(str(label).upper())}
-            )
-    )
-    print(query.to_json())
-    dict1={}
-    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
-    for auth in authset:
-        dict1[auth.get_value('150','a')]=auth.get_value('035','a')
-    #unbis=authset.to_xml()
-    #return Response(unbis, mimetype='text/xml')
-    return jsonify(dict1)
-
-
-
-
 @app.route('/<date>/S')
 def jsons(date):
     '''
@@ -367,15 +299,6 @@ def jsons(date):
     it is used to publish S/ records for iSCAD+ in a plain json
     22 July added fields 049:a and 260:a
     '''
-    try:
-        skp=int(request.args.get('skip'))
-    except:
-        skp=0
-    try:
-        limt=int(request.args.get('limit'))
-    except:
-        limt=50
-    print(f"skip is {skp} and limit is {limt}")
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
@@ -391,20 +314,101 @@ def jsons(date):
         Condition(
             tag='191',
             subfields={'b': re.compile('^S\/')}
-
-        )
+        ) 
     )
-    export_fields={'049':1,'089':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'650':1,'651':1,'710':1,'991':1,'993':1}
-    bibset = BibSet.from_query(query, projection=export_fields, skip=skp, limit=limt)
-    out_list=[('049','a'),('089','b'),('191','a'),('191','c'),('239','a'),('245','a'),('249','a'),('260','a'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('650','a'),('651','a'),('710','a'),('991','d'),('993','a')]
-
+    export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
+    bibset = BibSet.from_query(query, projection=export_fields)
+    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','d'),('992','a'),('993','a'),('996','a')]
 
     jsonl=[]
     
-
     for bib in bibset.records:
         out_dict={}
         for entry in out_list:
             out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
         jsonl.append(out_dict)
     return jsonify(jsonl)
+
+
+@app.route('/votes/<topic>')
+def votes(topic):
+    '''
+    looks up UNBIS thesaurus labels and returns matching T codes ..
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    it uses DLX authset to output fields 035 and 150
+    '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    try:   
+        yr_from=request.args.get('year_from')
+    except:
+        yr_from="1980"
+    try:
+        yr_to=request.args.get('year_to')
+    except:
+        yr_to='2020'
+    try:
+        cntry=request.args.get('Country')
+    except:
+        cntry='CANADA'
+    try:
+        vt=request.args.get('Vote')
+    except:
+        vt='A'
+
+    print(f"skip is {skp} and limit is {limt}")
+    print(f"year_from is {yr_from} and year_to is {yr_to}") 
+    print(f"Country is {cntry}")
+    print(f"Vote is {vt}")
+
+    query = QueryDocument(
+        Condition(
+            tag='191',
+            subfields={'d': re.compile(str(topic))}
+            ),
+        Condition(
+            tag='191',
+            subfields={'a': re.compile('^A')}
+            )
+
+    )
+    print(query.to_json())
+    dict_auth_ids={}
+    authset = AuthSet.from_query(query, projection={'001':1,'191':1}, skip=skp, limit=limt)
+    for auth in authset:
+        dict_auth_ids[auth.get_value('191','a')]=auth.get_value('001')
+    #unbis=authset.to_xml()
+    #return Response(unbis, mimetype='text/xml')
+    #return jsonify(dict_auth_ids)
+    dict_bibs={}
+    str_bibs=''
+    for key,value in dict_auth_ids.items():
+        #sample_id=int(dict_auth_ids['A/74/251'])
+        print(f"the id of {key} is {value}")
+        query_bib = QueryDocument(
+            Condition(
+                tag='991',
+                subfields={'d':int(value)}
+                ),
+            Condition(
+                tag='989',
+                subfields={'a': re.compile(str('Voting Data'))}
+                )
+        )
+        print(query_bib.to_json())
+        bibset = BibSet.from_query(query_bib, projection={'001':1,'791':1}, skip=skp, limit=limt)
+        for bib in bibset:
+            vote_country = bib.get_value('967')#+bib.get_values('967','e')
+            print(f"vote_country for {bib.get_value('791','a')} is {vote_country}")
+            if str(vote_country) == str(vt)+str(cntry):
+                dict_bibs[bib.get_value('791','a')]=bib.get_value('001')
+                str_bibs=str_bibs+' OR 791:['+bib.get_value('791','a')+']'
+    print(str_bibs)   
+    return jsonify(dict_bibs)
