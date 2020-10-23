@@ -318,7 +318,7 @@ def jsons(date):
     )
     export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     bibset = BibSet.from_query(query, projection=export_fields)
-    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','d'),('992','a'),('993','a'),('996','a')]
 
     jsonl=[]
     
@@ -389,6 +389,7 @@ def votes(topic):
     #return jsonify(dict_auth_ids)
     dict_bibs={}
     str_bibs=''
+    votecountry=''
     for key,value in dict_auth_ids.items():
         #sample_id=int(dict_auth_ids['A/74/251'])
         print(f"the id of {key} is {value}")
@@ -402,13 +403,15 @@ def votes(topic):
                 subfields={'a': re.compile(str('Voting Data'))}
                 )
         )
+        
         print(query_bib.to_json())
-        bibset = BibSet.from_query(query_bib, projection={'001':1,'791':1}, skip=skp, limit=limt)
+        bibset = BibSet.from_query(query_bib, projection={'001':1,'791':1, '967':1}, skip=skp, limit=limt)
         for bib in bibset:
-            vote_country = bib.get_value('967')#+bib.get_values('967','e')
-            print(f"vote_country for {bib.get_value('791','a')} is {vote_country}")
-            if str(vote_country) == str(vt)+str(cntry):
-                dict_bibs[bib.get_value('791','a')]=bib.get_value('001')
-                str_bibs=str_bibs+' OR 791:['+bib.get_value('791','a')+']'
+            for field in bib.get_fields('967'):
+                votecountry= field.get_value("d")+field.get_value("e")
+                #print(f'Country+Vote: {votecountry}')
+                if str(votecountry) == str(vt)+str(cntry): # for the entries matching input query parameters using AND logic
+                    dict_bibs[bib.get_value('791','a')]=bib.get_value('001')
+                    str_bibs=str_bibs+' OR 791:['+bib.get_value('791','a')+']'
     print(str_bibs)   
     return jsonify(dict_bibs)
