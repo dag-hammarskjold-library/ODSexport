@@ -308,8 +308,8 @@ def jsons(date):
         
     query = QueryDocument(
         Condition(
-            tag='999',
-            subfields={'b': re.compile('^'+str_date)}
+            tag='998',
+            subfields={'z': re.compile('^'+str_date)}
         ),
         Condition(
             tag='191',
