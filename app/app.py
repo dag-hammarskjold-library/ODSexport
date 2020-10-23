@@ -83,8 +83,8 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     print(f"the str_date is {str_date}")     
     query = QueryDocument(
         Condition(
-            tag='999',
-            subfields={'b': re.compile('^'+str_date)}
+            tag='998',
+            subfields={'z': re.compile('^'+str_date)}
         ),
         Condition(
             tag='029',
@@ -127,8 +127,8 @@ def jsonf(date):
     print(f"the str_date is {str_date}")
     query = QueryDocument(
         Condition(
-            tag='999',
-            subfields={'b': re.compile('^'+str_date)}
+            tag='998',
+            subfields={'z': re.compile('^'+str_date)}
         ),
         Condition(
             tag='029',
@@ -173,8 +173,8 @@ def symbols(date):
         
     query = QueryDocument(
         Condition(
-            tag='999',
-            subfields={'b': re.compile('^'+str_date)}
+            tag='998',
+            subfields={'z': re.compile('^'+str_date)}
         ),
         Condition(
             tag='029',
