@@ -1,14 +1,17 @@
 from flask import Flask, render_template, request, abort, jsonify, Response, url_for
 from requests import get
 from bson.objectid import ObjectId
+from bson import SON
 from .config import Config
 import boto3, re, time, os, pymongo
 import os, re
 from flask import send_from_directory
 from dlx import DB
-from dlx.marc import AuthSet, BibSet, QueryDocument, Condition
-import datetime
+from dlx.marc import AuthSet, BibSet, QueryDocument, Condition, Query
+#import datetime
 import json
+from datetime import datetime
+from datetime import timedelta
 
 
 '''
@@ -92,6 +95,50 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
         )
     )
     print(query.to_json())
+    start_time=datetime.now()
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
+    xml=bibset.to_xml()
+    #removing double space from the xml; creates pbs with the job number on ODS export
+    xml=xml.replace("  "," ")
+    print(f"duration for 998z was {datetime.now()-start_time}")
+    return Response(xml, mimetype='text/xml')
+
+@app.route('/<date>/xml999')
+def xml999(date):
+    '''
+outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+/YYYYMMDD/xml?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+if the date is in wrong format the function returns today's records
+it uses DLX bibset.to_xml serialization function to output MARCXML
+'''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
+    str_date=date.replace('-','')
+    print(f"the original str_date is {str_date}")
+    if len(str_date)!= 8:
+        date = datetime.datetime.now()
+        str_date=str(date.year)+str(date.month)+str(date.day)
+    print(f"the str_date is {str_date}")     
+    query = QueryDocument(
+        Condition(
+            tag='999',
+            subfields={'b': re.compile('^'+str_date)}
+        ),
+        Condition(
+            tag='029',
+            subfields={'a':'JN'}
+        )
+    )
+    print(query.to_json())
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
     xml=bibset.to_xml()
     #removing double space from the xml; creates pbs with the job number on ODS export
@@ -99,6 +146,51 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     return Response(xml, mimetype='text/xml')
 
 
+@app.route('/<date>/xmlupdated')
+def xmlupdated(date):
+    '''
+outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+/YYYYMMDD/xml?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+if the date is in wrong format the function returns today's records
+it uses DLX bibset.to_xml serialization function to output MARCXML
+'''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
+    str_date=date.replace('-','')
+    print(f"the original str_date is {str_date}")
+    if len(str_date)!= 8:
+        date = datetime.datetime.now()
+        str_date=str(date.year)+str(date.month)+str(date.day)
+        date_from=date
+    else:   
+        date_year=str_date[0:4]
+        date_month=str_date[4:6]
+        date_day=str_date[6:8]
+    date_from=datetime.fromisoformat(date_year+"-"+date_month+"-"+date_day)
+    #date_to=date_from+timedelta(days = 2)
+    print(f"date_from is {date_from}")
+    #print(f"date_to is {date_to}")
+    #son_query = SON(data={"$and":[{"updated": {"gte": date_from, "$lt": date_to}},{"029.subfields.value":"JN"}]})
+    dict_query= {"$and":[{"updated": {"$gte": date_from, "$lt": date_from+timedelta(days = 1)}},{"029.subfields.value":"JN"}]}  
+    #print(query.to_json())
+    #print(f"son query is {son_query}")
+    print(f"dict query is {dict_query}")
+    start_time=datetime.now()
+    bibset = BibSet.from_query(dict_query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
+    xml=bibset.to_xml()
+    #removing double space from the xml; creates pbs with the job number on ODS export
+    xml=xml.replace("  "," ")
+    print(f"duration for updated was {datetime.now()-start_time}")
+    return Response(xml, mimetype='text/xml')
 @app.route('/<date>/json')
 def jsonf(date):
     '''
@@ -213,7 +305,7 @@ def unbis():
     query = QueryDocument(
         Condition(
             tag='035',
-            subfields={'a': re.compile('^T')}
+            subfields={'a': re.compile('^[TP]')}
 
             )
 
