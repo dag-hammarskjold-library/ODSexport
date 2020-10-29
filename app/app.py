@@ -179,8 +179,8 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     #date_to=date_from+timedelta(days = 2)
     print(f"date_from is {date_from}")
     #print(f"date_to is {date_to}")
-    #son_query = SON(data={"$and":[{"updated": {"gte": date_from, "$lt": date_to}},{"029.subfields.value":"JN"}]})
     dict_query= {"$and":[{"updated": {"$gte": date_from, "$lt": date_from+timedelta(days = 1)}},{"029.subfields.value":"JN"}]}  
+    #dict_query= {"updated": {"$gte": date_from, "$lt": date_from+timedelta(days = 1)}}
     #print(query.to_json())
     #print(f"son query is {son_query}")
     print(f"dict query is {dict_query}")
@@ -305,7 +305,7 @@ def unbis():
     query = QueryDocument(
         Condition(
             tag='035',
-            subfields={'a': re.compile('^[TP]')}
+            subfields={'a': re.compile('^T')}
 
             )
 
