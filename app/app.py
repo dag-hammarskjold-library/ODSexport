@@ -7,7 +7,7 @@ import boto3, re, time, os, pymongo
 import os, re
 from flask import send_from_directory
 from dlx import DB
-from dlx.marc import AuthSet, BibSet, QueryDocument, Condition, Query
+from dlx.marc import AuthSet, BibSet, QueryDocument, Condition
 #import datetime
 import json
 from datetime import datetime
@@ -81,7 +81,7 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
-        date = datetime.datetime.now()
+        #date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")     
     query = QueryDocument(
@@ -97,11 +97,15 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     print(query.to_json())
     start_time=datetime.now()
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
+    print(f"duration for 998z was {datetime.now()-start_time}")
+    start_time_xml=datetime.now()
     xml=bibset.to_xml()
+    
     #removing double space from the xml; creates pbs with the job number on ODS export
     xml=xml.replace("  "," ")
-    print(f"duration for 998z was {datetime.now()-start_time}")
+    print(f"duration for xml serialization was {datetime.now()-start_time_xml}")
     return Response(xml, mimetype='text/xml')
+    
 
 @app.route('/<date>/xml999')
 def xml999(date):
@@ -191,6 +195,7 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     xml=xml.replace("  "," ")
     print(f"duration for updated was {datetime.now()-start_time}")
     return Response(xml, mimetype='text/xml')
+
 @app.route('/<date>/json')
 def jsonf(date):
     '''
@@ -234,6 +239,53 @@ def jsonf(date):
     for bib in bibset.records:
         jsonl.append(bib.to_json())
     return jsonify(jsonl)
+
+@app.route('/ds/<path:path>')
+def show_txt(path):
+    query = QueryDocument(
+        Condition(
+            tag='191',
+            #subfields={'a': re.compile('^'+path+'$')}
+            subfields={'a': path}
+        )
+    )
+    #print(f" the imp query is  -- {query.to_json()}")
+    #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
+    bibset = BibSet.from_query(query)
+    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','d'),('992','a'),('993','a'),('996','a')]
+    #print(f"duration for query was {datetime.now()-start_time_query}")
+    jsonl=[]
+    
+    for bib in bibset.records:
+        out_dict={}
+        #start_time_bib=datetime.now()
+        for entry in out_list:
+            #start_time_field=datetime.now()
+            out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
+            #print(f"for the field {entry[0]+'__'+entry[1]}")
+            #print(f"duration for getting values was {datetime.now()-start_time_field}")
+        jsonl.append(out_dict)
+        print(f"for the bib {bib.get_values('191','a')}")
+        #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
+    #print(f"total duration was {datetime.now()-start_time_all}")
+    return jsonify(jsonl)
+
+
+@app.route('/xml/<path:path>')
+def show_xml(path):
+    query = QueryDocument(
+        Condition(
+            tag='191',
+            #subfields={'a': re.compile('^'+path+'$')}
+            subfields={'a': path}
+        )
+    )
+    #print(f" the imp query is  -- {query.to_json()}")
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1})
+    xml=bibset.to_xml()
+    #removing double space from the xml; creates pbs with the job number on ODS export
+    xml=xml.replace("  "," ")
+    return Response(xml, mimetype='text/xml')
 
 
 @app.route('/<date>/symbols')
@@ -315,6 +367,64 @@ def unbis():
     unbis=authset.to_xml()
     return Response(unbis, mimetype='text/xml')
 
+
+
+@app.route('/<date>/unbis')
+def date_unbis(date):
+    '''
+    outputs records in native central DB schema json format for the date which is provided as a dynamic route inputed in YYYYMMDD or YYYY-MM-DD
+    e.g. /YYYY-MM-DD/json
+    e.g. /YYYYMMDD/json?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    if the date is in wrong format the function returns today's records
+    it uses DLX's bibset.to_json serialization function to output json
+    '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    #print(f"skip is {skp} and limit is {limt}")
+    str_date=date.replace('-','')
+    print(f"the original str_date is {str_date}")
+    #if len(str_date)!= 8:
+        #date = datetime.datetime.now()
+        #str_date=str(date.year)+str(date.month)+str(date.day)
+    print(f"the str_date is {str_date}")
+    query = QueryDocument(
+        Condition(
+            tag='998',
+            subfields={'z': re.compile('^'+str_date)}
+            ),
+        Condition(
+            tag='035',
+            subfields={'a': re.compile('^T')}
+            )
+        )
+        
+    #print(query.to_json())
+    '''
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    unbis=authset.to_xml()
+    return Response(unbis, mimetype='text/xml')
+    '''
+    dict1={}
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    for auth in authset:
+        val_035a=auth.get_values('035','a')
+        #print(f"035 values are: {val_035a}")
+        val_035a=''.join([str for str in val_035a if str[0]=='T'])
+        #dict1[auth.get_value('035','a')]=auth.get_value('150','a')
+        dict1[val_035a]=auth.get_value('150','a')
+        #dict1['FR']=auth.get_value('993','a')
+    #unbis=authset.to_xml()
+    #return Response(unbis, mimetype='text/xml')
+    return jsonify(dict1)
+
 @app.route('/tcode/<tcode>')
 def unbis_tcode(tcode):
     '''
@@ -331,7 +441,7 @@ def unbis_tcode(tcode):
         limt=int(request.args.get('limit'))
     except:
         limt=50
-    print(f"skip is {skp} and limit is {limt}")    
+    #print(f"skip is {skp} and limit is {limt}")    
     query = QueryDocument(
         Condition(
             tag='035',
@@ -340,9 +450,14 @@ def unbis_tcode(tcode):
     )
     print(query.to_json())
     dict1={}
-    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    authset = AuthSet.from_query(query, projection={'035':1,'150':1,'993':1,'994':1,'995':1, '996':1, '997':1}, skip=skp, limit=limt)
     for auth in authset:
-        dict1[auth.get_value('035','a')]=auth.get_value('150','a')
+        val_035a=auth.get_values('035','a')
+        #print(f"035 values are: {val_035a}")
+        val_035a=''.join([str for str in val_035a if str[0]=='T'])
+        #dict1[auth.get_value('035','a')]=auth.get_value('150','a')
+        dict1[val_035a]={'EN':auth.get_value('150','a'),'FR':auth.get_value('993','a'),'ES':auth.get_value('994','a'),'AR':auth.get_value('995','a'), 'ZH':auth.get_value('996','a'),'RU':auth.get_value('997','a')}
+        #dict1['FR']=auth.get_value('993','a')
     #unbis=authset.to_xml()
     #return Response(unbis, mimetype='text/xml')
     return jsonify(dict1)
@@ -374,8 +489,21 @@ def unbis_label(label):
     print(query.to_json())
     dict1={}
     authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    '''
     for auth in authset:
         dict1[auth.get_value('150','a')]=auth.get_value('035','a')
+    #unbis=authset.to_xml()
+    #return Response(unbis, mimetype='text/xml')
+    return jsonify(dict1)
+    '''
+
+    for auth in authset:
+        val_035a=auth.get_values('035','a')
+        #print(f"035 values are: {val_035a}")
+        val_035a=''.join([str for str in val_035a if str[0]=='T'])
+        #dict1[auth.get_value('035','a')]=auth.get_value('150','a')
+        dict1[auth.get_value('150','a')]=val_035a
+        #dict1['FR']=auth.get_value('993','a')
     #unbis=authset.to_xml()
     #return Response(unbis, mimetype='text/xml')
     return jsonify(dict1)
@@ -391,13 +519,23 @@ def jsons(date):
     it is used to publish S/ records for iSCAD+ in a plain json
     22 July added fields 049:a and 260:a
     '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")    
+    #start_time_all=datetime.now()
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")
-        
+    #start_time_query=datetime.now()   
     query = QueryDocument(
         Condition(
             tag='998',
@@ -409,16 +547,23 @@ def jsons(date):
         ) 
     )
     export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
-    bibset = BibSet.from_query(query, projection=export_fields)
+    bibset = BibSet.from_query(query, projection=export_fields, skip=skp, limit=limt)
     out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','d'),('992','a'),('993','a'),('996','a')]
-
+    #print(f"duration for query was {datetime.now()-start_time_query}")
     jsonl=[]
     
     for bib in bibset.records:
         out_dict={}
+        #start_time_bib=datetime.now()
         for entry in out_list:
+            #start_time_field=datetime.now()
             out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
+            #print(f"for the field {entry[0]+'__'+entry[1]}")
+            #print(f"duration for getting values was {datetime.now()-start_time_field}")
         jsonl.append(out_dict)
+        #print(f"for the bib {bib.get_values('191','a')}")
+        #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
+    #print(f"total duration was {datetime.now()-start_time_all}")
     return jsonify(jsonl)
 
 
