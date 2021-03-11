@@ -58,7 +58,57 @@ def show_pdf(path):
 def test1():
     return(render_template('toods2.html', data=return_data))
 
+@app.route('/intoods')
+def toods():
+    return(render_template('toods.html', data=return_data))
 
+@app.route('/exporttoods',methods=['GET','POST'])
+def exporttoods():
+    #form = "toods"
+    symbols=request.form.get("symboltoODS")
+    print(f"symbols are {symbols} ")
+    response_dict=export_to_ods(symbols)
+    return(render_template('toods.html', response_dict=response_dict))
+
+def export_to_ods(symbols):
+    token_url="https://api.un.org/token"
+    by_symbol_host="https://api.un.org/un/library/ods/v1/record"
+
+    #symbols = path.split()
+    ssm_client = boto3.client('ssm')
+    odsapitoken = ssm_client.get_parameter(Name='ods-api-token')['Parameter']['Value']
+    payload='grant_type=client_credentials'
+    headers = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+    'Authorization': 'Basic ' + odsapitoken
+    }
+
+    try:    
+        response = requests.request("POST", token_url, headers=headers, data=payload)
+        response_text=json.loads(response.text)
+        #print(response_text)
+        access_token=response_text.get('access_token')
+        print(f" access token is {access_token}")
+    except:
+        raise
+
+    hdrs={"Authorization":"Bearer "+access_token}
+
+    for symbol in symbols.split():
+        prmtrs={"symbol":symbol}
+        print(f"symbol in the loop is {symbol}")
+        try:
+            result=requests.get(
+                url=by_symbol_host,
+                headers=hdrs,
+                params=prmtrs
+            )
+            print(result.text)
+        except: 
+            print(f"something is wrong")
+            raise
+    return ("Symbols {} sent to ODS".format(symbols))
+    #return(render_template('toods.html', response_dict = result.json))
 
 @app.route('/favicon.ico')
 def favicon():
