@@ -8,10 +8,15 @@ import os, re
 from flask import send_from_directory
 from dlx import DB
 from dlx.marc import AuthSet, BibSet, QueryDocument, Condition
+from dlx.file import File, Identifier
 #import datetime
 import json
 from datetime import datetime
 from datetime import timedelta
+import requests
+import json
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 '''
@@ -42,6 +47,18 @@ return_data=""
 @app.route('/')
 def index():
     return(render_template('index.html', data=return_data))
+
+@app.route('/pdf/<path:path>')
+def show_pdf(path):
+    xfile = File.latest_by_identifier_language(Identifier('symbol', path), 'EN')
+    print(xfile.uri)
+    return(render_template('test1.html', symbol=path,uri='http://'+xfile.uri))
+    
+@app.route('/test1')
+def test1():
+    return(render_template('toods2.html', data=return_data))
+
+
 
 @app.route('/favicon.ico')
 def favicon():
@@ -252,7 +269,7 @@ def show_txt(path):
     #print(f" the imp query is  -- {query.to_json()}")
     #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     bibset = BibSet.from_query(query)
-    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     jsonl=[]
     
@@ -548,7 +565,7 @@ def jsons(date):
     )
     export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     bibset = BibSet.from_query(query, projection=export_fields, skip=skp, limit=limt)
-    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     jsonl=[]
     
