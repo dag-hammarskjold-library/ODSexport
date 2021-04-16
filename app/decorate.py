@@ -21,7 +21,7 @@ def add_856(f):
 
         res = f(*args)
         #res is a bibset.to_xml, root is a collection
-        ts1=time.time()
+        #ts1=time.time()
         root = ET.fromstring(res)
         for rec in root.findall('record'):
             for datafield in rec.findall('datafield'):
@@ -29,17 +29,17 @@ def add_856(f):
                     for subfield in datafield.findall("subfield"):
                         if subfield.get("code")=="a":
                             symbol = subfield.text
-            print(f" time trav. xml is {time.time()-ts1}")
-            ts=time.time()
+            #print(f" time trav. xml is {time.time()-ts1}")
+            #ts=time.time()
             #txt_856=elem_856(symbol)
             #rc_856=ET.fromstring(txt_856)
             
             rc_856=elem_856(symbol)
-            print(f"  time fetching elem_856 is {time.time()-ts}")
-            ts5=time.time()
+            #print(f"  time fetching elem_856 is {time.time()-ts}")
+            #ts5=time.time()
             for dfld in rc_856.findall('datafield'):
                 rec.append(dfld)
-            print(f"   time appending 856 datafields is {time.time()-ts5}")
+            #print(f"   time appending 856 datafields is {time.time()-ts5}")
         modified=ET.tostring(root, encoding="utf-8")
 
         return modified

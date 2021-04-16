@@ -218,6 +218,61 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     return Response(xml, mimetype='text/xml')
 
 
+@app.route('/<date>/xml856')
+def xml856(date):
+    '''
+outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+/YYYYMMDD/xml?skip=n&limit=m
+skip=n URL parameter is used to skip n records. Default is 0.
+limit=m URL parameter is used to limit number of records returned. Default is 50.
+if the date is in wrong format the function returns today's records
+it uses DLX bibset.to_xml serialization function to output MARCXML
+'''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
+    str_date=date.replace('-','')
+    print(f"the original str_date is {str_date}")
+    if len(str_date)!= 8:
+        date = datetime.datetime.now()
+        str_date=str(date.year)+str(date.month)+str(date.day)
+    print(f"the str_date is {str_date}")     
+    query = QueryDocument(
+        Condition(
+            tag='998',
+            subfields={'z': re.compile('^'+str_date)}
+        ),
+        Condition(
+            tag='029',
+            subfields={'a':'JN'}
+        ),
+        Condition(
+            tag='930',
+            subfields={'a':'DIG'}
+        )
+    )
+    print(query.to_json())
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1}, skip=skp, limit=limt)
+    ts3=time.time()
+    xml=add856(bibset)
+    print(f"total time for adding 856 is {time.time()-ts3}")
+    #xml=bibset.to_xml()
+    #decoding to string and emoving double space from the xml; creates pbs with the job number on ODS export
+    xml=xml.decode("utf-8").replace("  "," ")
+    return Response(xml, mimetype='text/xml')
+
+
+
+
+
+
+
 @app.route('/<date>/xmlupdated')
 def xmlupdated(date):
     '''
