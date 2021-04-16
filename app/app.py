@@ -9,6 +9,7 @@ from flask import send_from_directory
 from dlx import DB
 from dlx.marc import AuthSet, BibSet, QueryDocument, Condition
 from dlx.file import File, Identifier
+from .decorate import add_856, elem_856, timeit
 #import datetime
 import json
 from datetime import datetime
@@ -210,7 +211,7 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
         )
     )
     print(query.to_json())
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1}, skip=skp, limit=limt)
     xml=bibset.to_xml()
     #removing double space from the xml; creates pbs with the job number on ODS export
     xml=xml.replace("  "," ")
@@ -348,11 +349,41 @@ def show_xml(path):
         )
     )
     #print(f" the imp query is  -- {query.to_json()}")
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1})
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1})
     xml=bibset.to_xml()
     #removing double space from the xml; creates pbs with the job number on ODS export
     xml=xml.replace("  "," ")
     return Response(xml, mimetype='text/xml')
+
+#add856 # this is to insert 856 tags with PDF files info into xml
+@add_856
+def add856(bibset):
+    return bibset.to_xml()
+
+
+
+@app.route('/xml856/<path:path>')
+def show_xml856(path):
+    query = QueryDocument(
+        Condition(
+            tag='191',
+            #subfields={'a': re.compile('^'+path+'$')}
+            subfields={'a': path}
+        )
+    )
+    #print(f" the imp query is  -- {query.to_json()}")
+    ts2=time.time()
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1})
+    #add856 # this is where we isnert 856 tags for files info
+    print(f"time for query is {time.time()-ts2}")
+    ts3=time.time()
+    xml=add856(bibset)
+    print(f"total time for adding 856 is {time.time()-ts3}")
+    #xml=bibset.to_xml()
+    #decoding to string and emoving double space from the xml; creates pbs with the job number on ODS export
+    xml=xml.decode("utf-8").replace("  "," ")
+    return Response(xml, mimetype='text/xml')
+
 
 
 @app.route('/<date>/symbols')
