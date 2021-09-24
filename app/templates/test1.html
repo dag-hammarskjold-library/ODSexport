@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+<head>
+    <style>
+        canvas {
+            width: 800px;
+            height: 1200px;
+            border: 3px solid black;
+            border-radius: 10px;
+        }
+        button {
+            outline :0;
+            border: none;
+            border-radius: 3px;
+            color: white;
+            background: black;
+            width: 100px;
+            height: 40px;
+            transition: all .1s ease-in-out;
+        }
+        button:hover {
+            background:  none;
+            border: 3px solid black;
+            color: black;
+        }
+    </style>
+</head>
+{% block content %}
+<div class="container">
+    <div class="row">
+        <p>
+            <h3>Inline PDF</h3>
+
+            <a href="#" onclick="window.open('{{uri}}', '_blank',`toolbar=no,
+             scrollbars=yes,
+             resizable=yes,
+             top=269, left=869,
+             width=690,
+             height=690`); return false;">{{symbol}}</a>
+        </p>
+    </div>
+</div>
+
+<canvas id="pdf_canvas"></canvas>
+        <div class="container">
+                <input type="hidden" id="hidden1" name="hidden1" value='{{uri}}'>
+                <button id="prev_page">Previos Page</button>
+                <button id="next_page">next Page</button>
+                <span id="current_page_num"></span>
+                    of
+                <span id="total_page_num"></span>
+                    
+                <input type="text" id="page_num">
+                <button id="go_to_page">Go To Page</button>
+        </div>
+        
+        <!-- Replace pdf.js with downloaded pdf.js file -->
+        <script src="{{url_for('static',filename='js/pdf.js')}}"></script>
+        <script src="{{url_for('static',filename='js/script.js')}}"></script>
+{% endblock %}
