@@ -2,7 +2,9 @@ from flask import Flask, render_template, request, abort, jsonify, Response, url
 from requests import get
 from bson.objectid import ObjectId
 from bson import SON
+from bson.json_util import dumps, loads
 from .config import Config
+from pymongo import MongoClient
 import boto3, re, time, os, pymongo
 import os, re
 from flask import send_from_directory
@@ -37,7 +39,13 @@ if __name__ == "__main__":
 
 DB.connect(Config.connect_string)
 collection = Config.DB.bibs
-
+#toconnect to itpp sections
+myMongoURI=Config.connect_string
+myClient = MongoClient(myMongoURI)
+myDatabase=myClient.undlFiles
+sectionOutput = "itp_sample_output_copy"
+sectionsCollection=myDatabase[sectionOutput]
+#sectionsCollection=Config.DB.itp_sample_output_copy
 # Define any classes you want to use here, or you could put
 # them in other files and import.
 
@@ -110,6 +118,35 @@ def export_to_ods(symbols):
             raise
     return ("Symbols {} sent to ODS".format(symbols))
     #return(render_template('toods.html', response_dict = result.json))
+
+'''show json itpp itsp'''
+@app.route('/itpitsp/<path:path>')
+def itsp(path):
+
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50 
+    print(f"skip is {skp} and limit is {limt}")
+
+
+    itsps=sectionsCollection.find({"$and":[{'section':'itpitsp'},{'bodysession':path}]},{"_id": 0, "sort":0,"section":0},skip=skp, limit=limt)
+    #print (itsps)
+    cursl=[dumps(itsp) for itsp in itsps]
+    #for itsp in itsps:
+    #    jsonl.append(itsp) 
+    #    #print(itsp.to_json())
+    #return [strng.encode('utf-8') for strng in cursl]
+    return jsonify(cursl)
+    
+
+
+
+
 
 @app.route('/favicon.ico')
 def favicon():

@@ -1,0 +1,99 @@
+{% extends 'base.html' %} {% block content %}
+
+<style type="text/css">
+    .customize {
+        height: 200px;
+        width: 600px;
+    }
+</style>
+<style>
+    div#loading {
+        position: fixed;
+        width: 1000px;
+        height: 10000px;
+        display: none;
+        margin-left: auto;
+        margin-right: auto;
+        opacity: 0.5;
+    }
+</style>
+<script src="https://www.kryogenix.org/code/browser/sorttable/sorttable.js"></script>
+<div id="loading">
+    <img src="{{ url_for('static', filename='img/ajax-loader.gif') }}">
+</div>
+<div id="content" class="container">
+    <div class="container customize shadow sm-12 m-4 lg-3">
+        <h6 class="mt-3 mb-4">Enter symbols for ODS: § use correct case, § separate with space !</h6>
+        <div class="container mt-4 mb-4">
+           
+            <hr>
+
+            <form class="mt-3 form-group" method="POST" action="{{url_for('exporttoods')}}">
+                <div class="row ">
+                    <input type="text" class="form-control" name="symboltoODS" id="symboltoODS" placeholder="Enter Document Symbol">
+                    <br>
+                    <br>
+                    <br>
+
+
+                    <button id="execute" type="submit" class="btn btn-outline-primary mb-5" onclick="loading();" disabled> Send to ODS</button>
+                </div>
+            </form>
+            
+            
+        </div>
+        
+    </div>
+    <br>
+    <div id="output" class="container">
+        <!--<div class="container mt-4 mb-4" >
+            <h4>Current snapshots:</h4>
+            {% for snapshot in snapshots %}
+            <ul class="list-unstyled mt-3 mb-4 text-left font-weight-bold">
+                <li> <span class="text-dark">*   {{snapshot}}</span></a></li>
+            </ul>
+            {% endfor %}
+        </div> -->
+        <div class="card sm-12 m-4 lg-3 shadow-sm">
+            <div class="card-header">
+                <h4 class="my-0 font-weight-normal">Response: </h4>
+            </div>
+        </div>
+            <p class="card-body p-3 m-3 text-center">
+                <div class="card-text"></div>
+                <ul class="list-unstyled mt-3 mb-4 text-left font-weight-normal">
+                    <li> <span class="text-dark">{{response_dict}}</span></a></li>
+                </ul>
+            </p>
+                 
+            </div>
+
+        
+    <br>
+
+</div>
+
+<script type="text/javascript">
+   function loading() {
+        $("#loading").show();
+  }
+</script>
+<script>
+var someInput = document.querySelector('.form-control');
+someInput.addEventListener('input', function () {
+    'someInput.value = someInput.value.toUpperCase();
+});
+</script>
+<script type="text/javascript">
+var someInput = document.querySelector('.form-control');
+    someInput.addEventListener('input', function(){
+        if(this.value.length > 0) { 
+            document.getElementById('execute').disabled = false; 
+        } else { 
+            document.getElementById('execute').disabled = true;
+        }
+    });
+</script>
+
+
+{% endblock %}
