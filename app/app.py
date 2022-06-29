@@ -11,10 +11,11 @@ from flask import send_from_directory
 from dlx import DB
 from dlx.marc import AuthSet, BibSet, QueryDocument, Condition
 from dlx.file import File, Identifier
-from .decorate import add_856, elem_856, timeit
+from .decorate import add_856, elem_856
 #import datetime
 import json
-from datetime import datetime
+#import datetime
+from datetime import datetime, date
 from datetime import timedelta
 import requests
 import json
@@ -158,14 +159,14 @@ def date():
     returns the current date - for test purposes
     '''
     data={}
-    current_time = datetime.datetime.now() 
+    current_time = datetime.now() 
     data['year']=current_time.year
     data['month']=current_time.month
     data['day']=current_time.day
     return(render_template('date.html', data=return_data))
 
-@app.route('/<date>/xml')
-def xml(date):
+@app.route('/<date>/xml998z')
+def xml998z(date):
     '''
 outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
 /YYYYMMDD/xml?skip=n&limit=m
@@ -249,7 +250,9 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     )
     print(query.to_json())
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1}, skip=skp, limit=limt)
+    start_time_xml=datetime.now()
     xml=bibset.to_xml()
+    print(f"duration for xml999 serialization was {datetime.now()-start_time_xml}")
     #removing double space from the xml; creates pbs with the job number on ODS export
     xml=xml.replace("  "," ")
     return Response(xml, mimetype='text/xml')
@@ -310,8 +313,8 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
 
 
 
-@app.route('/<date>/xmlupdated')
-def xmlupdated(date):
+@app.route('/<ldate>/xml')
+def xml(ldate):
     '''
 outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
 /YYYYMMDD/xml?skip=n&limit=m
@@ -329,17 +332,19 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     except:
         limt=50
     print(f"skip is {skp} and limit is {limt}")
-    str_date=date.replace('-','')
+    str_date=ldate.replace('-','')
     print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
-        date = datetime.datetime.now()
-        str_date=str(date.year)+str(date.month)+str(date.day)
-        date_from=date
+        ldate = datetime.now()
+        str_date=str(ldate.year)+str(ldate.month)+str(ldate.day)
+        date_year,date_month, date_day = ldate.year, ldate.month, ldate.day
+        date_from=ldate
     else:   
         date_year=str_date[0:4]
         date_month=str_date[4:6]
         date_day=str_date[6:8]
-    date_from=datetime.fromisoformat(date_year+"-"+date_month+"-"+date_day)
+    date_from=datetime.strptime(date_year+"-"+date_month+"-"+date_day, "%Y-%m-%d")
+    #date_from=date.fromisoformat(date_year+"-"+date_month+"-"+date_day)
     #date_to=date_from+timedelta(days = 2)
     print(f"date_from is {date_from}")
     #print(f"date_to is {date_to}")
@@ -412,7 +417,7 @@ def show_txt(path):
     #print(f" the imp query is  -- {query.to_json()}")
     #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     bibset = BibSet.from_query(query)
-    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     jsonl=[]
     
@@ -441,7 +446,7 @@ def show_xml(path):
         )
     )
     #print(f" the imp query is  -- {query.to_json()}")
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1})
+    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1, '998':1})
     xml=bibset.to_xml()
     #removing double space from the xml; creates pbs with the job number on ODS export
     xml=xml.replace("  "," ")
@@ -466,7 +471,7 @@ def show_xml856(path):
     #print(f" the imp query is  -- {query.to_json()}")
     ts2=time.time()
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1})
-    #add856 # this is where we isnert 856 tags for files info
+    #add856 # this is where we insert 856 tags for files info
     print(f"time for query is {time.time()-ts2}")
     ts3=time.time()
     xml=add856(bibset)
@@ -721,10 +726,10 @@ def jsons(date):
     #start_time_all=datetime.now()
     str_date=date.replace('-','')
     print(f"the original str_date is {str_date}")
-    if len(str_date)!= 8:
-        date = datetime.datetime.now()
-        str_date=str(date.year)+str(date.month)+str(date.day)
-    print(f"the str_date is {str_date}")
+    #if len(str_date)!= 8:
+        #date = datetime.datetime.now()
+       # str_date=str(date.year)+str(date.month)+str(date.day)
+    #print(f"the str_date is {str_date}")
     #start_time_query=datetime.now()   
     query = QueryDocument(
         Condition(
@@ -738,7 +743,7 @@ def jsons(date):
     )
     export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     bibset = BibSet.from_query(query, projection=export_fields, skip=skp, limit=limt)
-    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('249','a'),('245','a'),('260','a'),('260','b'),('260','a'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     jsonl=[]
     
