@@ -2,7 +2,7 @@
 
 1. Use directions
 
- - /\<date\>/xml for marc xml output ; e.g./20200701/xml
+ - /\<date\>/xml for marc xml output  - ODS daily export; e.g./20200701/xml
  - /\<date\>/xml999
  - /\<date\>/xmlupdated
  
