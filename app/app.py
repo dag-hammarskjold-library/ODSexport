@@ -137,12 +137,13 @@ def itsp(path):
 
     itsps=sectionsCollection.find({"$and":[{'section':'itpitsp'},{'bodysession':path}]},{"_id": 0, "sort":0,"section":0},skip=skp, limit=limt)
     #print (itsps)
-    cursl=[dumps(itsp) for itsp in itsps]
+    #cursl=[dumps(itsp) for itsp in itsps]
     #for itsp in itsps:
     #    jsonl.append(itsp) 
     #    #print(itsp.to_json())
     #return [strng.encode('utf-8') for strng in cursl]
-    return jsonify(cursl)
+    #return jsonify(itsps)
+    return jsonify([itsp for itsp in itsps])
     
 
 
