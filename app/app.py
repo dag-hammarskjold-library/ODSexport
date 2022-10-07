@@ -1,15 +1,16 @@
+from posixpath import split
 from flask import Flask, render_template, request, abort, jsonify, Response, url_for
 from requests import get
 from bson.objectid import ObjectId
 from bson import SON
 from bson.json_util import dumps, loads
 from .config import Config
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
 import boto3, re, time, os, pymongo
 import os, re
 from flask import send_from_directory
 from dlx import DB
-from dlx.marc import AuthSet, BibSet, QueryDocument, Condition
+from dlx.marc import AuthSet, BibSet, QueryDocument, Condition, Query
 from dlx.file import File, Identifier
 from .decorate import add_856, elem_856
 #import datetime
@@ -120,6 +121,46 @@ def export_to_ods(symbols):
     return ("Symbols {} sent to ODS".format(symbols))
     #return(render_template('toods.html', response_dict = result.json))
 
+'''show json itpp itp'''
+@app.route('/itp/<path:path>')
+def itp(path):
+    '''
+    outputs records in native central DB schema json format for the section/body/session which is provided as a dynamic route 
+    e.g. /subj/A/76
+    e.g. /subj/A/76?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    #if the date is in wrong format the function returns today's records
+    it uses DLX's bibset.to_json serialization function to output json
+    '''
+
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50 
+    print(f"skip is {skp} and limit is {limt}")
+    inpt_list=path.split("/")
+    if inpt_list[0].lower() in ["itsp", "itss", "itsc","subj", "age", "vot", "dsl","meet","reps","sor","res"]:
+        pass
+    else:
+        inpt_list[0]=""
+    bodysession=inpt_list[1].upper()+"/"+inpt_list[2]
+
+    itsps=sectionsCollection.find({"$and":[{'section':'itp'+inpt_list[0].lower()},{'bodysession':bodysession}]},{"_id": 0, "sort":0,"section":0},skip=skp, limit=limt)
+    #print (itsps)
+    #cursl=[dumps(itsp) for itsp in itsps]
+    #for itsp in itsps:
+    #    jsonl.append(itsp) 
+    #    #print(itsp.to_json())
+    #return [strng.encode('utf-8') for strng in cursl]
+    #return jsonify(itsps)
+    return jsonify([itsp for itsp in itsps])
+    
+
 '''show json itpp itsp'''
 @app.route('/itpitsp/<path:path>')
 def itsp(path):
@@ -145,8 +186,6 @@ def itsp(path):
     #return jsonify(itsps)
     return jsonify([itsp for itsp in itsps])
     
-
-
 
 
 
@@ -405,6 +444,75 @@ def jsonf(date):
     for bib in bibset.records:
         jsonl.append(bib.to_json())
     return jsonify(jsonl)
+
+
+
+@app.route('/gatables/<path:path>')
+def jsonfga(path):
+    '''
+    outputs records in native central DB schema json format for the body/session which is provided as a dynamic route inputed as e.g. A/76
+    e.g. /gatables/A/76
+    e.g. /gatables/A/76?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    #if the date is in wrong format the function returns today's records
+    it uses DLX's bibset.to_json serialization function to output json
+    '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
+    #str_date=date.replace('-','')
+    #print(f"the original str_date is {str_date}")
+   # if len(str_date)!= 8:
+        #date = datetime.datetime.now()
+        #str_date=str(date.year)+str(date.month)+str(date.day)
+   # print(f"the str_date is {str_date}")
+    inpt_list=path.split("/")
+    print(inpt_list)
+    #query is 791:"A76" AND 930:VOT
+    query = Query(
+        Condition(
+            tag='791',
+            subfields={'b': str(inpt_list[0]+'/')}
+        ),
+        Condition(
+            tag='791',
+            subfields={'c':str(inpt_list[1])}
+        ),
+        Condition(
+            tag='930',
+            subfields={'a':"VOT"}
+        )
+    )
+    print (query.to_json())
+    bibset = BibSet.from_query(query, projection={'245':1,'269':1,'590':1,'791':1,'952':1,'991':1,'992':1,'993':1,'996':1},sort=[('992',-1)],skip=skp, limit=limt)
+    out_list=[('245','a'),('269','a'),('590','a'),('791','a'),('791','c'),('952','a'),('991','b'),('992','a'),('993','a'),('996','a')]
+    #print(f"duration for query was {datetime.now()-start_time_query}")
+    jsonl=[]
+    
+    for bib in bibset.records:
+        out_dict={}
+        #start_time_bib=datetime.now()
+        for entry in out_list:
+            #start_time_field=datetime.now()
+            out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
+            #print(f"for the field {entry[0]+'__'+entry[1]}")
+            #print(f"duration for getting values was {datetime.now()-start_time_field}")
+        jsonl.append(out_dict)
+    #jsonl=[]
+    #for bib in bibset.records:
+    #    jsonl.append(bib.to_json())
+    return jsonify(jsonl)
+
+
+
+
 
 @app.route('/ds/<path:path>')
 def show_txt(path):
