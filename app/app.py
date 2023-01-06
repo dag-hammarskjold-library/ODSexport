@@ -10,7 +10,7 @@ import boto3, re, time, os, pymongo
 import os, re
 from flask import send_from_directory
 from dlx import DB
-from dlx.marc import AuthSet, BibSet, QueryDocument, Condition, Query
+from dlx.marc import AuthSet, BibSet, Query, QueryDocument, Condition
 from dlx.file import File, Identifier
 from .decorate import add_856, elem_856
 #import datetime
@@ -159,34 +159,6 @@ def itp(path):
     #return [strng.encode('utf-8') for strng in cursl]
     #return jsonify(itsps)
     return jsonify([itsp for itsp in itsps])
-    
-
-'''show json itpp itsp'''
-@app.route('/itpitsp/<path:path>')
-def itsp(path):
-
-    try:
-        skp=int(request.args.get('skip'))
-    except:
-        skp=0
-    try:
-        limt=int(request.args.get('limit'))
-    except:
-        limt=50 
-    print(f"skip is {skp} and limit is {limt}")
-
-
-    itsps=sectionsCollection.find({"$and":[{'section':'itpitsp'},{'bodysession':path}]},{"_id": 0, "sort":0,"section":0},skip=skp, limit=limt)
-    #print (itsps)
-    #cursl=[dumps(itsp) for itsp in itsps]
-    #for itsp in itsps:
-    #    jsonl.append(itsp) 
-    #    #print(itsp.to_json())
-    #return [strng.encode('utf-8') for strng in cursl]
-    #return jsonify(itsps)
-    return jsonify([itsp for itsp in itsps])
-    
-
 
 
 @app.route('/favicon.ico')
@@ -204,98 +176,6 @@ def date():
     data['month']=current_time.month
     data['day']=current_time.day
     return(render_template('date.html', data=return_data))
-
-@app.route('/<date>/xml998z')
-def xml998z(date):
-    '''
-outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
-/YYYYMMDD/xml?skip=n&limit=m
-skip=n URL parameter is used to skip n records. Default is 0.
-limit=m URL parameter is used to limit number of records returned. Default is 50.
-if the date is in wrong format the function returns today's records
-it uses DLX bibset.to_xml serialization function to output MARCXML
-'''
-    try:
-        skp=int(request.args.get('skip'))
-    except:
-        skp=0
-    try:
-        limt=int(request.args.get('limit'))
-    except:
-        limt=50
-    print(f"skip is {skp} and limit is {limt}")
-    str_date=date.replace('-','')
-    print(f"the original str_date is {str_date}")
-    if len(str_date)!= 8:
-        #date = datetime.datetime.now()
-        str_date=str(date.year)+str(date.month)+str(date.day)
-    print(f"the str_date is {str_date}")     
-    query = QueryDocument(
-        Condition(
-            tag='998',
-            subfields={'z': re.compile('^'+str_date)}
-        ),
-        Condition(
-            tag='029',
-            subfields={'a':'JN'}
-        )
-    )
-    print(query.to_json())
-    start_time=datetime.now()
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1}, skip=skp, limit=limt)
-    print(f"duration for 998z was {datetime.now()-start_time}")
-    start_time_xml=datetime.now()
-    xml=bibset.to_xml()
-    
-    #removing double space from the xml; creates pbs with the job number on ODS export
-    xml=xml.replace("  "," ")
-    print(f"duration for xml serialization was {datetime.now()-start_time_xml}")
-    return Response(xml, mimetype='text/xml')
-    
-
-@app.route('/<date>/xml999')
-def xml999(date):
-    '''
-outputs records in MARCXML format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
-/YYYYMMDD/xml?skip=n&limit=m
-skip=n URL parameter is used to skip n records. Default is 0.
-limit=m URL parameter is used to limit number of records returned. Default is 50.
-if the date is in wrong format the function returns today's records
-it uses DLX bibset.to_xml serialization function to output MARCXML
-'''
-    try:
-        skp=int(request.args.get('skip'))
-    except:
-        skp=0
-    try:
-        limt=int(request.args.get('limit'))
-    except:
-        limt=50
-    print(f"skip is {skp} and limit is {limt}")
-    str_date=date.replace('-','')
-    print(f"the original str_date is {str_date}")
-    if len(str_date)!= 8:
-        date = datetime.datetime.now()
-        str_date=str(date.year)+str(date.month)+str(date.day)
-    print(f"the str_date is {str_date}")     
-    query = QueryDocument(
-        Condition(
-            tag='999',
-            subfields={'b': re.compile('^'+str_date)}
-        ),
-        Condition(
-            tag='029',
-            subfields={'a':'JN'}
-        )
-    )
-    print(query.to_json())
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1}, skip=skp, limit=limt)
-    start_time_xml=datetime.now()
-    xml=bibset.to_xml()
-    print(f"duration for xml999 serialization was {datetime.now()-start_time_xml}")
-    #removing double space from the xml; creates pbs with the job number on ODS export
-    xml=xml.replace("  "," ")
-    return Response(xml, mimetype='text/xml')
 
 
 @app.route('/<date>/xml856')
@@ -346,11 +226,6 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
     #decoding to string and emoving double space from the xml; creates pbs with the job number on ODS export
     xml=xml.decode("utf-8").replace("  "," ")
     return Response(xml, mimetype='text/xml')
-
-
-
-
-
 
 
 @app.route('/<ldate>/xml')
@@ -437,8 +312,9 @@ def jsonf(date):
             subfields={'a':'JN'}
         )
     )
-
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=skp, limit=limt)
+    sel_query={"029.subfields.value":"JN"}
+    dict_query=date_query(str_date, **sel_query)
+    bibset = BibSet.from_query(dict_query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1,'998':1}, skip=skp, limit=limt)
 
     jsonl=[]
     for bib in bibset.records:
@@ -490,24 +366,28 @@ def jsonfga(path):
             subfields={'a':"VOT"}
         )
     )
-    print (query.to_json())
-    bibset = BibSet.from_query(query, projection={'245':1,'269':1,'590':1,'791':1,'952':1,'991':1,'992':1,'993':1,'996':1},sort=[('992',-1)],skip=skp, limit=limt)
+    #print (query.to_json())
+    bibset = BibSet.from_query(query, projection={'245':1,'269':1,'590':1,'791':1,'952':1,'991':1,'992':1,'993':1,'996':1},sort=[('992.subfields.value',-1),('_id',-1)],skip=skp, limit=limt)
     out_list=[('245','a'),('269','a'),('590','a'),('791','a'),('791','c'),('952','a'),('991','b'),('992','a'),('993','a'),('996','a')]
-    #print(f"duration for query was {datetime.now()-start_time_query}")
+    
     jsonl=[]
     
     for bib in bibset.records:
         out_dict={}
-        #start_time_bib=datetime.now()
+        
         for entry in out_list:
-            #start_time_field=datetime.now()
             out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
-            #print(f"for the field {entry[0]+'__'+entry[1]}")
-            #print(f"duration for getting values was {datetime.now()-start_time_field}")
+            
         jsonl.append(out_dict)
-    #jsonl=[]
-    #for bib in bibset.records:
-    #    jsonl.append(bib.to_json())
+    def sort_l(e):
+        #print(e['791__a'][0][e['791__a'][0].rindex('/')+1:])
+        sorted_s=e['791__a'][0][e['791__a'][0].rindex('/')+1:]
+        #sorted_s=e['791__a'][0][e['791__a'][0].rindex('/')+1:].replaceAll("[a-zA-Z[]-]","")
+        sorted_ss = re.sub('\D', '', sorted_s)
+        return int(sorted_ss)
+
+    jsonl.sort(key=sort_l, reverse=True)
+
     return jsonify(jsonl)
 
 
@@ -592,50 +472,6 @@ def show_xml856(path):
 
 
 
-@app.route('/<date>/symbols')
-def symbols(date):
-    '''
-    outputs records in txt format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
-    e.g. /YYYYMMDD/symbols /YYYY-MM-DD/symbols?skip=n&limit=m
-    skip=n URL parameter is used to skip n records. Default is 0.
-    limit=m URL parameter is used to limit number of records returned. Default is 50.
-    if the date is in wrong format the function returns today's records
-    it uses DLX bibset.to_txt serialization function to output MARCXML
-    '''
-    try:
-        skp=int(request.args.get('skip'))
-    except:
-        skp=0
-    try:
-        limt=int(request.args.get('limit'))
-    except:
-        limt=50
-    print(f"skip is {skp} and limit is {limt}")
-    str_date=date.replace('-','')
-    print(f"the original str_date is {str_date}")
-    if len(str_date)!= 8:
-        date = datetime.datetime.now()
-        str_date=str(date.year)+str(date.month)+str(date.day)
-    print(f"the str_date is {str_date}")
-    
-        
-    query = QueryDocument(
-        Condition(
-            tag='998',
-            subfields={'z': re.compile('^'+str_date)}
-        ),
-        Condition(
-            tag='029',
-            subfields={'a':'JN'}
-        )
-    )
-
-    bibset = BibSet.from_query(query, projection={'029':1,'191': 1}, skip=skp, limit=limt)
-
-    str_out=''
-    for bib in bibset.records:
-        str_out+=bib.to_str()
-    return Response(str_out, mimetype='text/plain')
 
 
 
@@ -709,15 +545,16 @@ def date_unbis(date):
             subfields={'a': re.compile('^T')}
             )
         )
-        
-    #print(query.to_json())
+    sel_query={"035.subfields.value":{"$regex":"^T"}}
+    dict_query=date_query(str_date,**sel_query)  
+    #print(query.to_json()) "191.subfields.value":{"$regex":"^S\/"}
     '''
     authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
     unbis=authset.to_xml()
     return Response(unbis, mimetype='text/xml')
     '''
     dict1={}
-    authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
+    authset = AuthSet.from_query(dict_query, projection={'035':1,'150':1}, skip=skp, limit=limt)
     for auth in authset:
         val_035a=auth.get_values('035','a')
         #print(f"035 values are: {val_035a}")
@@ -812,6 +649,23 @@ def unbis_label(label):
     #return Response(unbis, mimetype='text/xml')
     return jsonify(dict1)
 
+def date_query(str_date, **sel_query):  
+    if len(str_date)!= 8:
+        ldate = datetime.now()
+        str_date=str(ldate.year)+str(ldate.month)+str(ldate.day)
+        date_year,date_month, date_day = ldate.year, ldate.month, ldate.day
+        date_from=ldate
+    else:   
+        date_year=str_date[0:4]
+        date_month=str_date[4:6]
+        date_day=str_date[6:8]
+    date_from=datetime.strptime(date_year+"-"+date_month+"-"+date_day, "%Y-%m-%d")
+    dict_query= {"updated": {"$gte": date_from, "$lt": date_from+timedelta(days = 1)}}
+    dict_query.update(sel_query)
+    return dict_query
+
+
+
 @app.route('/<date>/S')
 def jsons(date):
     '''
@@ -834,13 +688,24 @@ def jsons(date):
     print(f"skip is {skp} and limit is {limt}")    
     #start_time_all=datetime.now()
     str_date=date.replace('-','')
+
     print(f"the original str_date is {str_date}")
+    if len(str_date)!= 8:
+        ldate = datetime.now()
+        str_date=str(ldate.year)+str(ldate.month)+str(ldate.day)
+        date_year,date_month, date_day = ldate.year, ldate.month, ldate.day
+        date_from=ldate
+    else:   
+        date_year=str_date[0:4]
+        date_month=str_date[4:6]
+        date_day=str_date[6:8]
+    date_from=datetime.strptime(date_year+"-"+date_month+"-"+date_day, "%Y-%m-%d")
     #if len(str_date)!= 8:
         #date = datetime.datetime.now()
        # str_date=str(date.year)+str(date.month)+str(date.day)
     #print(f"the str_date is {str_date}")
     #start_time_query=datetime.now()   
-    query = QueryDocument(
+    query = Query(
         Condition(
             tag='998',
             subfields={'z': re.compile('^'+str_date)}
@@ -850,8 +715,9 @@ def jsons(date):
             subfields={'b': re.compile('^S\/')}
         ) 
     )
-    export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
-    bibset = BibSet.from_query(query, projection=export_fields, skip=skp, limit=limt)
+    dict_query= {"updated": {"$gte": date_from, "$lt": date_from+timedelta(days = 1)},"191.subfields.value":{"$regex":"^S\/"}}
+    export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630':1,'650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
+    bibset = BibSet.from_query(dict_query, projection=export_fields, skip=skp, limit=limt)
     out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     jsonl=[]
@@ -865,10 +731,66 @@ def jsons(date):
             #print(f"for the field {entry[0]+'__'+entry[1]}")
             #print(f"duration for getting values was {datetime.now()-start_time_field}")
         jsonl.append(out_dict)
+        #print(f"for the bib {bib.get_values('650','a')}")
         #print(f"for the bib {bib.get_values('191','a')}")
         #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
     #print(f"total duration was {datetime.now()-start_time_all}")
     return jsonify(jsonl)
+
+@app.route('/<date>/symbols')
+def symbols(date):
+    '''
+    outputs records in txt format for the date which is provided as a dynamic route in YYYYMMDD or YYYY-MM-DD formats
+    e.g. /YYYYMMDD/symbols /YYYY-MM-DD/symbols?skip=n&limit=m
+    skip=n URL parameter is used to skip n records. Default is 0.
+    limit=m URL parameter is used to limit number of records returned. Default is 50.
+    if the date is in wrong format the function returns today's records
+    it uses DLX bibset.to_txt serialization function to output MARCXML
+    '''
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50
+    print(f"skip is {skp} and limit is {limt}")
+    str_date=date.replace('-','')
+    print(f"the original str_date is {str_date}")
+
+    if len(str_date)!= 8:
+        date = datetime.datetime.now()
+        str_date=str(date.year)+str(date.month)+str(date.day)
+    print(f"the str_date is {str_date}")
+    if len(str_date)!= 8:
+        ldate = datetime.now()
+        str_date=str(ldate.year)+str(ldate.month)+str(ldate.day)
+        date_year,date_month, date_day = ldate.year, ldate.month, ldate.day
+        date_from=ldate
+    else:   
+        date_year=str_date[0:4]
+        date_month=str_date[4:6]
+        date_day=str_date[6:8]
+    date_from=datetime.strptime(date_year+"-"+date_month+"-"+date_day, "%Y-%m-%d")
+        
+    query = QueryDocument(
+        Condition(
+            tag='998',
+            subfields={'z': re.compile('^'+str_date)}
+        ),
+        Condition(
+            tag='029',
+            subfields={'a':'JN'}
+        )
+    )
+    dict_query= {"updated": {"$gte": date_from, "$lt": date_from+timedelta(days = 1)},"191.subfields.value":{"$regex":"^S\/"}}
+    bibset = BibSet.from_query(dict_query, projection={'029':1,'191': 1}, skip=skp, limit=limt)
+
+    str_out=''
+    for bib in bibset.records:
+        str_out+=bib.to_str()
+    return Response(str_out, mimetype='text/plain')
 
 
 @app.route('/votes/<topic>')
