@@ -218,7 +218,9 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
         )
     )
     print(query.to_json())
-    bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1}, skip=skp, limit=limt)
+    sel_query={"930.subfields.value":"DIG","029.subfields.value":"JN"}
+    dict_query=date_query(str_date,**sel_query)
+    bibset = BibSet.from_query(dict_query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1}, skip=skp, limit=limt)
     ts3=time.time()
     xml=add856(bibset)
     print(f"total time for adding 856 is {time.time()-ts3}")
