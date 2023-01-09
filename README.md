@@ -3,8 +3,6 @@
 1. Use directions
 
  - /\<date\>/xml for marc xml output  - ODS daily export; e.g./20200701/xml
- - /\<date\>/xml999
- - /\<date\>/xmlupdated
  
  - /\<date\>/xml856 ; adds 856 tags to the xml using decorator
   
