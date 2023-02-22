@@ -1,5 +1,6 @@
 from posixpath import split
 from flask import Flask, render_template, request, abort, jsonify, Response, url_for
+from flask import Flask, render_template, request
 from requests import get
 from bson.objectid import ObjectId
 from bson import SON
@@ -40,11 +41,12 @@ if __name__ == "__main__":
     pass
 
 DB.connect(Config.connect_string)
-collection = Config.DB.bibs
+#collection = Config.DB.bibs
 #toconnect to itpp sections
 myMongoURI=Config.connect_string
 myClient = MongoClient(myMongoURI)
 myDatabase=myClient.undlFiles
+collection = myDatabase.bibs
 sectionOutput = "itp_sample_output_copy"
 sectionsCollection=myDatabase[sectionOutput]
 #sectionsCollection=Config.DB.itp_sample_output_copy
@@ -58,6 +60,30 @@ return_data=""
 @app.route('/')
 def index():
     return(render_template('index.html', data=return_data))
+
+
+@app.route('/baskt_users')
+def users():
+    users = []
+    baskets_by_user = {}
+    db=myDatabase
+    # Retrieve user information and baskets from MongoDB
+    for user in db.user.find():
+        user_data = {'_id': str(user['_id']), 'name': user['username']}
+        users.append(user_data)
+        baskets = []
+       
+        for basket in db.basket.find({'owner': user['_id'], 'items':{"$exists":True}}):
+            for item in basket['items']:
+                basket_data = {'collection': item['collection'], 'record_id': item['record_id']}
+                baskets.append(basket_data)
+
+        baskets_by_user[str(user['_id'])] = baskets
+    
+    
+    
+    # Render the template with the user and basket data
+    return render_template('baskt_users.html', users=users, baskets_by_user=baskets_by_user)
 
 @app.route('/pdf/<path:path>')
 def show_pdf(path):
@@ -159,6 +185,35 @@ def itp(path):
     #return [strng.encode('utf-8') for strng in cursl]
     #return jsonify(itsps)
     return jsonify([itsp for itsp in itsps])
+
+
+@app.route('/file_upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # Check if the post request has the file part
+        if 'file' not in request.files:
+            return render_template('file_upload_and_contents.html', error='No file part')
+        
+        file = request.files['file']
+        
+        # If user does not select file, browser also submit an empty part without filename
+        if file.filename == '':
+            return render_template('file_upload_and_contents.html', error='No selected file')
+        
+        if file:
+            # Save the uploaded file to the uploads folder
+            file_path = os.path.join('', file.filename)
+            file.save(file_path)
+            
+            # Open the uploaded file and read its contents
+            with open(file_path, 'r') as f:
+                content = f.read()
+            
+            # Render the file_contents.html template with the file contents
+            return render_template('file_uc1.html', content=content)
+    
+    # If the request method is GET or the form has not been submitted yet, render the file_upload.html template
+    return render_template('file_uc1.html')
 
 
 @app.route('/favicon.ico')

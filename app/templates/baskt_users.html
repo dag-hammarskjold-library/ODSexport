@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Upload a Text File</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <!-- file_upload_and_contents.html -->
+    <div class="container">
+      <h1 class="mt-4">Users</h1>
+      <ul class="list-group">
+          {% for user in users %}
+              <li class="list-group-item">
+                  <h2>{{ user.name }}</h2>
+                  <ul>
+                      {% for basket in baskets_by_user[user._id] %}
+                          <li>{{ basket.collection }} - {{ basket.record_id }}</li>
+                      {% endfor %}
+                  </ul>
+              </li>
+          {% endfor %}
+      </ul>
+  </div>
+  
+  </body>
+</html>
