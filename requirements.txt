@@ -20,8 +20,7 @@ colorama==0.4.1
 cryptography==3.2
 DateTime==4.3
 decorator==4.4.2
-dlx @ git+https://github.com/dag-hammarskjold-library/dlx@9f3ccc426acf7e6d8eeab99df023e0103d1fade7
-dlx-dl @ git+https://github.com/dag-hammarskjold-library/dlx-dl@9071600142a24cc6e34451265728598d77e74c91
+dlx @ git+https://github.com/dag-hammarskjold-library/dlx
 docker==4.2.0
 docutils==0.15.2
 durationpy==0.5
@@ -62,7 +61,6 @@ multidict==4.7.4
 natsort==7.0.1
 networkx==2.4
 nltk==3.5
-ods-api @ git+https://github.com/dag-hammarskjold-library/ods-api@d81d3407170214d5046ff54a2ac43a13fc17a778
 packaging==20.3
 pbr==5.4.4
 pdf2image==1.14.0

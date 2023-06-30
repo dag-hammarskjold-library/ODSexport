@@ -37,7 +37,7 @@ class Config(object):
     client = boto3.client('ssm')
     connect_string = client.get_parameter(Name='connect-string')['Parameter']['Value']
 
-    DB = DB.connect(connect_string)
+    #DB = DB.connect(connect_string)
     
 class ProductionConfig(Config):
     DEBUG = False

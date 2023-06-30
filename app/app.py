@@ -22,6 +22,7 @@ from datetime import timedelta
 import requests
 import json
 import ssl
+import certifi
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -39,13 +40,14 @@ simple test URLs
 app = Flask(__name__)
 if __name__ == "__main__":
     pass
-
-DB.connect(Config.connect_string)
+#dbname = client.get_parameter(Name='dbname')['Parameter']['Value']
+#DB.connect(dbname)
 #collection = Config.DB.bibs
 #toconnect to itpp sections
 myMongoURI=Config.connect_string
-myClient = MongoClient(myMongoURI)
-myDatabase=myClient.undlFiles
+myClient = MongoClient(myMongoURI, tlsCAFile=certifi.where())
+myDatabase=myClient['undlFiles']
+DB.connect(myMongoURI, database='undlFiles')
 collection = myDatabase.bibs
 sectionOutput = "itp_sample_output_copy"
 sectionsCollection=myDatabase[sectionOutput]
@@ -935,3 +937,38 @@ def votes(topic):
                     str_bibs=str_bibs+' OR 791:['+bib.get_value('791','a')+']'
     print(str_bibs)   
     return jsonify(dict_bibs)
+
+@app.route('/gadl')
+def display_tablega():
+    url = 'https://o8mn2cdyp5.execute-api.us-east-1.amazonaws.com/dev/json/?rec_id=23&refresh=true'
+    response = requests.get(url)
+    data = response.json()
+    data1=[]
+    dict1={}
+    print (type(data))
+    for dict in data:
+        myorder = ['document_symbol', 'title', 'agenda']
+        dict1 = {k: dict[k] for k in myorder}
+        data1.append(dict1)
+
+    headers = list(data1[0].keys())
+    rows = [list(item.values()) for item in data1]
+    return render_template('dl1.html', headers=headers, rows=rows)
+
+
+@app.route('/scdl')
+def display_tablesc():
+    url = 'https://o8mn2cdyp5.execute-api.us-east-1.amazonaws.com/dev/json/?rec_id=24&refresh=true'
+    response = requests.get(url)
+    data = response.json()
+    data1=[]
+    dict1={}
+    print (type(data))
+    for dict in data:
+        myorder = ['document_symbol', 'title', 'agenda']
+        dict1 = {k: dict[k] for k in myorder}
+        data1.append(dict1)
+
+    headers = list(data1[0].keys())
+    rows = [list(item.values()) for item in data1]
+    return render_template('dl1.html', headers=headers, rows=rows)
