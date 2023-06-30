@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Upload a Text File</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <!-- file_upload_and_contents.html -->
+<div class="container">
+    <div class="panel panel-default">
+      <div class="panel-heading">Upload a Text File</div>
+      <div class="panel-body">
+        <form method="POST" enctype="multipart/form-data">
+          <div class="form-group">
+            <label for="file">Select a file to upload:</label>
+            <input type="file" name="file" id="file">
+          </div>
+          <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+      </div>
+    </div>
+    {% if content %}
+    <div class="panel panel-default">
+      <div class="panel-heading">File Contents</div>
+      <div class="panel-body">
+        <pre>{{ content }}</pre>
+        <a href="/" class="btn btn-default">Back</a>
+      </div>
+    </div>
+    {% else %}
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <p>No file uploaded yet.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  </body>
+</html>

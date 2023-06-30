@@ -1,5 +1,6 @@
 from posixpath import split
 from flask import Flask, render_template, request, abort, jsonify, Response, url_for
+from flask import Flask, render_template, request
 from requests import get
 from bson.objectid import ObjectId
 from bson import SON
@@ -21,6 +22,7 @@ from datetime import timedelta
 import requests
 import json
 import ssl
+import certifi
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -38,13 +40,15 @@ simple test URLs
 app = Flask(__name__)
 if __name__ == "__main__":
     pass
-
-DB.connect(Config.connect_string)
-collection = Config.DB.bibs
+#dbname = client.get_parameter(Name='dbname')['Parameter']['Value']
+#DB.connect(dbname)
+#collection = Config.DB.bibs
 #toconnect to itpp sections
 myMongoURI=Config.connect_string
-myClient = MongoClient(myMongoURI)
-myDatabase=myClient.undlFiles
+myClient = MongoClient(myMongoURI, tlsCAFile=certifi.where())
+myDatabase=myClient['undlFiles']
+DB.connect(myMongoURI, database='undlFiles')
+collection = myDatabase.bibs
 sectionOutput = "itp_sample_output_copy"
 sectionsCollection=myDatabase[sectionOutput]
 #sectionsCollection=Config.DB.itp_sample_output_copy
@@ -58,6 +62,30 @@ return_data=""
 @app.route('/')
 def index():
     return(render_template('index.html', data=return_data))
+
+
+@app.route('/baskt_users')
+def users():
+    users = []
+    baskets_by_user = {}
+    db=myDatabase
+    # Retrieve user information and baskets from MongoDB
+    for user in db.user.find():
+        user_data = {'_id': str(user['_id']), 'name': user['username']}
+        users.append(user_data)
+        baskets = []
+       
+        for basket in db.basket.find({'owner': user['_id'], 'items':{"$exists":True}}):
+            for item in basket['items']:
+                basket_data = {'collection': item['collection'], 'record_id': item['record_id']}
+                baskets.append(basket_data)
+
+        baskets_by_user[str(user['_id'])] = baskets
+    
+    
+    
+    # Render the template with the user and basket data
+    return render_template('baskt_users.html', users=users, baskets_by_user=baskets_by_user)
 
 @app.route('/pdf/<path:path>')
 def show_pdf(path):
@@ -159,6 +187,35 @@ def itp(path):
     #return [strng.encode('utf-8') for strng in cursl]
     #return jsonify(itsps)
     return jsonify([itsp for itsp in itsps])
+
+
+@app.route('/file_upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # Check if the post request has the file part
+        if 'file' not in request.files:
+            return render_template('file_upload_and_contents.html', error='No file part')
+        
+        file = request.files['file']
+        
+        # If user does not select file, browser also submit an empty part without filename
+        if file.filename == '':
+            return render_template('file_upload_and_contents.html', error='No selected file')
+        
+        if file:
+            # Save the uploaded file to the uploads folder
+            file_path = os.path.join('', file.filename)
+            file.save(file_path)
+            
+            # Open the uploaded file and read its contents
+            with open(file_path, 'r') as f:
+                content = f.read()
+            
+            # Render the file_contents.html template with the file contents
+            return render_template('file_uc1.html', content=content)
+    
+    # If the request method is GET or the form has not been submitted yet, render the file_upload.html template
+    return render_template('file_uc1.html')
 
 
 @app.route('/favicon.ico')
@@ -880,3 +937,38 @@ def votes(topic):
                     str_bibs=str_bibs+' OR 791:['+bib.get_value('791','a')+']'
     print(str_bibs)   
     return jsonify(dict_bibs)
+
+@app.route('/gadl')
+def display_tablega():
+    url = 'https://o8mn2cdyp5.execute-api.us-east-1.amazonaws.com/dev/json/?rec_id=23&refresh=true'
+    response = requests.get(url)
+    data = response.json()
+    data1=[]
+    dict1={}
+    print (type(data))
+    for dict in data:
+        myorder = ['document_symbol', 'title', 'agenda']
+        dict1 = {k: dict[k] for k in myorder}
+        data1.append(dict1)
+
+    headers = list(data1[0].keys())
+    rows = [list(item.values()) for item in data1]
+    return render_template('dl1.html', headers=headers, rows=rows)
+
+
+@app.route('/scdl')
+def display_tablesc():
+    url = 'https://o8mn2cdyp5.execute-api.us-east-1.amazonaws.com/dev/json/?rec_id=24&refresh=true'
+    response = requests.get(url)
+    data = response.json()
+    data1=[]
+    dict1={}
+    print (type(data))
+    for dict in data:
+        myorder = ['document_symbol', 'title', 'agenda']
+        dict1 = {k: dict[k] for k in myorder}
+        data1.append(dict1)
+
+    headers = list(data1[0].keys())
+    rows = [list(item.values()) for item in data1]
+    return render_template('dl1.html', headers=headers, rows=rows)

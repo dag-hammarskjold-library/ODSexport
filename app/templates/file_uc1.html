@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Upload a Text File</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  </head>
+  <body>
+    <!-- file_upload_and_contents.html -->
+    <style>
+        .upload-drop-zone {
+          height: 150px;
+          border: 2px dashed #ccc;
+          border-radius: 10px;
+          text-align: center;
+          padding-top: 50px;
+          font-size: 1.2em;
+          color: #ccc;
+        }
+        .upload-drop-zone.hover {
+          border-color: #aaa;
+          color: #aaa;
+        }
+        </style>
+        
+       <!-- file_upload_and_contents.html -->
+<script>
+    var dropZone = document.getElementById('dropZone');
+    var fileInput = document.getElementById('fileInput');
+    var droppedFile = document.getElementById('droppedFile');
+    var uploadButton = document.getElementById('uploadButton');
+    var pasteText = document.getElementById('pasteText');
+    
+    dropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('hover');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('hover');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('hover');
+      var file = e.dataTransfer.files[0];
+      droppedFile.value = file.name;
+    });
+    
+    dropZone.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', function() {
+      var file = fileInput.files[0];
+      droppedFile.value = file.name;
+    });
+    
+    uploadButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('uploadForm').submit();
+    });
+    
+    pasteText.addEventListener('paste', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var file = e.clipboardData.files[0];
+      if (file) {
+        droppedFile.value = file.name;
+      } else {
+        var text = e.clipboardData.getData('text');
+        pasteText.value = text;
+      }
+    });
+    </script>
+     
+        <!-- file_upload_and_contents.html -->
+<div class="container">
+    <div class="panel panel-default">
+      <div class="panel-heading">Upload a Text File</div>
+      <div class="panel-body">
+        <form method="POST" enctype="multipart/form-data" id="uploadForm">
+          <div class="form-group">
+            <div class="upload-drop-zone" id="dropZone">
+              <span class="drop-zone-promt">Drag and drop your file here or click to select a file.</span>
+              <button type="button" class="btn btn-primary btn-upload" id="uploadButton">Upload</button>
+              <textarea class="form-control" rows="5" id="pasteText" placeholder="Or paste text here"></textarea>
+            </div>
+            <input type="file" name="file" id="fileInput" style="display: none;">
+            <input type="hidden" name="dropped_file" id="droppedFile">
+          </div>
+        </form>
+      </div>
+    </div>
+    {% if content %}
+    <div class="panel panel-default">
+      <div class="panel-heading">File Contents</div>
+      <div class="panel-body">
+        <pre>{{ content }}</pre>
+        <a href="/" class="btn btn-default">Back</a>
+      </div>
+    </div>
+    {% else %}
+    <div class="panel panel-default">
+      <div class="panel-body">
+        <p>No file uploaded yet.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  
+  </body>
+</html>

@@ -6,7 +6,7 @@ from dlx.file import File, Identifier
 from .config import Config
 import xml.etree.ElementTree as ET
 
-DB.connect(Config.connect_string)
+#DB.connect(Config.connect_string)
 #collection = Config.DB.bibs
 
 
