@@ -49,11 +49,17 @@ myClient = MongoClient(myMongoURI, tlsCAFile=certifi.where())
 myDatabase=myClient['undlFiles']
 DB.connect(myMongoURI, database='undlFiles')
 collection = myDatabase.bibs
-sectionOutput = "itp_sample_output_copy"
-sectionsCollection=myDatabase[sectionOutput]
+#sectionOutput = "itp_sample_output_copy"
+#sectionsCollection=myDatabase[sectionOutput]
 #sectionsCollection=Config.DB.itp_sample_output_copy
 # Define any classes you want to use here, or you could put
 # them in other files and import.
+client_dev_atlas=MongoClient(Config.connect_string_dev_atlas, tlsCAFile=certifi.where())
+db_dev_atlas=client_dev_atlas['itpp']
+rules_coll = db_dev_atlas['dev_Itpp_document']
+snapshot_coll=db_dev_atlas['itpp_snapshot_test3']
+sectionOutput = "itp_sample_output_copy"
+sectionsCollection=db_dev_atlas[sectionOutput]
 
 return_data=""
 
