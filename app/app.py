@@ -56,8 +56,6 @@ collection = myDatabase.bibs
 # them in other files and import.
 client_dev_atlas=MongoClient(Config.connect_string_dev_atlas, tlsCAFile=certifi.where())
 db_dev_atlas=client_dev_atlas['itpp']
-rules_coll = db_dev_atlas['dev_Itpp_document']
-snapshot_coll=db_dev_atlas['itpp_snapshot_test3']
 sectionOutput = "itp_sample_output_copy"
 sectionsCollection=db_dev_atlas[sectionOutput]
 
