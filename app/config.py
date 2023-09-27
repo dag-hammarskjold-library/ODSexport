@@ -36,6 +36,9 @@ class Config(object):
 
     client = boto3.client('ssm')
     connect_string = client.get_parameter(Name='connect-string')['Parameter']['Value']
+    connect_string_dev_atlas = client.get_parameter(Name='dev-itpp-connect-string')['Parameter']['Value']
+    #dbname_dev_atlas = client.get_parameter(Name='dbname')['Parameter']['Value']
+    dbname_dev_atlas = 'itpp'
 
     #DB = DB.connect(connect_string)
     
