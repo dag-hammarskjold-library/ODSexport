@@ -558,12 +558,10 @@ def unbis():
         limt=50
     print(f"skip is {skp} and limit is {limt}")    
     query = QueryDocument(
-        Condition(
+            Condition(
             tag='035',
-            subfields={'a': re.compile('^T')}
-
+            subfields={'a': re.compile('^[PT]')}
             )
-
     )
     print(query.to_json())
     authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
