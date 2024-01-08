@@ -1,0 +1,20 @@
+# safelist
+branches:
+  only:
+  - master
+
+language: python
+python:
+- "3.10"
+install:
+- pip install -r requirements.txt
+
+stages:
+  - name: Dev
+    if: branch = master
+
+jobs:
+  include:
+    - stage: Dev
+      script:
+      - zappa update -s zappa_settings.json dev
