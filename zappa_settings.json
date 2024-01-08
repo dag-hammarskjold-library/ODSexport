@@ -2,7 +2,7 @@
     "dev": {
         "app_function": "app.app.app",
         "project_name": "ODSExport",
-        "runtime": "python3.10",
+        "runtime": "python3.11",
         "aws_region": "us-east-1"
     }
  }
