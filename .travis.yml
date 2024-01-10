@@ -9,7 +9,9 @@ language: python
 python:
 - "3.10"
 install:
-- pip install -r requirements.txt
+#- pip install -r requirements.txt
+- pip install Flask pymongo requests
+- pip install git+https://github.com/dag-hammarskjold-library/dlx
 
 stages:
   - name: Dev
