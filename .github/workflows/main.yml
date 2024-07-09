@@ -28,6 +28,7 @@ jobs:
           . venv/bin/activate
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install zappa
           deactivate
       - name: Deploy with Zappa
         run: | 
