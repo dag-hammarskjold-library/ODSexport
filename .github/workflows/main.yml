@@ -1,0 +1,35 @@
+name: ODS Export CI/CD
+on:
+  release:
+    types: [ released ]
+
+jobs:
+  deploy-flask-serverless:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+      - name: Setting up AWS Credentials
+        run: |
+          pip install awscli
+          aws configure set region us-east-1
+          aws configure set output json
+          aws configure set aws_access_key_id ${{secrets.AWS_ACCESS_KEY_ID}}
+          aws configure set aws_secret_access_key ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      - name: Create virtual environment
+        run: |
+          pip install virtualenv
+          python3 -m virtualenv venv
+      - name: Install requiremenents
+        run: | 
+          . venv/bin/activate
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          deactivate
+      - name: Deploy with Zappa
+        run: | 
+          . venv/bin/activate
+          zappa update dev
