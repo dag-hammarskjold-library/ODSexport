@@ -264,7 +264,7 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")     
-    query = QueryDocument(
+    query = Query(
         Condition(
             tag='998',
             subfields={'z': re.compile('^'+str_date)}
@@ -278,7 +278,7 @@ it uses DLX bibset.to_xml serialization function to output MARCXML
             subfields={'a':'DIG'}
         )
     )
-    print(query.to_json())
+    #print(query.to_json())
     sel_query={"930.subfields.value":"DIG","029.subfields.value":"JN"}
     dict_query=date_query(str_date,**sel_query)
     bibset = BibSet.from_query(dict_query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1}, skip=skp, limit=limt)
@@ -358,14 +358,14 @@ def jsonf(date):
         limt=int(request.args.get('limit'))
     except:
         limt=50
-    print(f"skip is {skp} and limit is {limt}")
+    #print(f"skip is {skp} and limit is {limt}")
     str_date=date.replace('-','')
-    print(f"the original str_date is {str_date}")
+    #print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
-    print(f"the str_date is {str_date}")
-    query = QueryDocument(
+    #print(f"the str_date is {str_date}")
+    query = Query(
         Condition(
             tag='998',
             subfields={'z': re.compile('^'+str_date)}
@@ -459,21 +459,25 @@ def jsonfga(path):
 
 @app.route('/ds/<path:path>')
 def show_txt(path):
-    query = QueryDocument(
-        Condition(
-            tag='191',
-            #subfields={'a': re.compile('^'+path+'$')}
-            subfields={'a': path}
-        )
-    )
+    ts2=time.time()
+    query = Query.from_string("symbol:"+path) # Dataset-search_query
+    #query = QueryDocument(
+     #   Condition(
+     #       tag='191',
+     #       #subfields={'a': re.compile('^'+path+'$')}
+     #       subfields={'a': path}
+     #   )
+    #)
     #print(f" the imp query is  -- {query.to_json()}")
     #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     bibset = BibSet.from_query(query)
     out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
+    #print(f"time for query is {time.time()-ts2}")
     jsonl=[]
-    
+    #print(f"time for query is {time.time()-ts2}")
     for bib in bibset.records:
+        
         out_dict={}
         #start_time_bib=datetime.now()
         for entry in out_list:
@@ -482,7 +486,7 @@ def show_txt(path):
             #print(f"for the field {entry[0]+'__'+entry[1]}")
             #print(f"duration for getting values was {datetime.now()-start_time_field}")
         jsonl.append(out_dict)
-        print(f"for the bib {bib.get_values('191','a')}")
+        #print(f"for the bib {bib.get_values('191','a')}")
         #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
     #print(f"total duration was {datetime.now()-start_time_all}")
     return jsonify(jsonl)
@@ -490,13 +494,14 @@ def show_txt(path):
 
 @app.route('/xml/<path:path>')
 def show_xml(path):
-    query = QueryDocument(
-        Condition(
-            tag='191',
-            #subfields={'a': re.compile('^'+path+'$')}
-            subfields={'a': path}
-        )
-    )
+    #query = QueryDocument(
+     #   Condition(
+      #      tag='191',
+       #     #subfields={'a': re.compile('^'+path+'$')}
+        #    subfields={'a': path}
+        #)
+    #)
+    query = Query.from_string("symbol:"+path) # Dataset-search_query
     #print(f" the imp query is  -- {query.to_json()}")
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'856':1,'991':1, '998':1})
     xml=bibset.to_xml()
@@ -513,21 +518,22 @@ def add856(bibset):
 
 @app.route('/xml856/<path:path>')
 def show_xml856(path):
-    query = QueryDocument(
-        Condition(
-            tag='191',
-            #subfields={'a': re.compile('^'+path+'$')}
-            subfields={'a': path}
-        )
-    )
+    #query = QueryDocument(
+     #   Condition(
+     #       tag='191',
+     #       #subfields={'a': re.compile('^'+path+'$')}
+     #       subfields={'a': path}
+     #   )
+    #)
+    query = Query.from_string("symbol:"+path) # Dataset-search_query
     #print(f" the imp query is  -- {query.to_json()}")
     ts2=time.time()
     bibset = BibSet.from_query(query, projection={'029':1,'091':1,'191': 1,'245':1,'269':1,'650':1,'991':1})
     #add856 # this is where we insert 856 tags for files info
-    print(f"time for query is {time.time()-ts2}")
+    #print(f"time for query is {time.time()-ts2}")
     ts3=time.time()
     xml=add856(bibset)
-    print(f"total time for adding 856 is {time.time()-ts3}")
+    #print(f"total time for adding 856 is {time.time()-ts3}")
     #xml=bibset.to_xml()
     #decoding to string and emoving double space from the xml; creates pbs with the job number on ODS export
     xml=xml.decode("utf-8").replace("  "," ")
@@ -557,13 +563,13 @@ def unbis():
     except:
         limt=50
     print(f"skip is {skp} and limit is {limt}")    
-    query = QueryDocument(
+    query = Query(
             Condition(
             tag='035',
             subfields={'a': re.compile('^[PT]')}
             )
     )
-    print(query.to_json())
+    #print(query.to_json())
     authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
     unbis=authset.to_xml()
     return Response(unbis, mimetype='text/xml')
@@ -596,7 +602,7 @@ def date_unbis(date):
         #date = datetime.datetime.now()
         #str_date=str(date.year)+str(date.month)+str(date.day)
     print(f"the str_date is {str_date}")
-    query = QueryDocument(
+    query = Query(
         Condition(
             tag='998',
             subfields={'z': re.compile('^'+str_date)}
@@ -644,13 +650,13 @@ def unbis_tcode(tcode):
     except:
         limt=50
     #print(f"skip is {skp} and limit is {limt}")    
-    query = QueryDocument(
+    query = Query(
         Condition(
             tag='035',
             subfields={'a': re.compile(str(tcode).upper())}
             )
     )
-    print(query.to_json())
+    #print(query.to_json())
     dict1={}
     authset = AuthSet.from_query(query, projection={'035':1,'150':1,'993':1,'994':1,'995':1, '996':1, '997':1}, skip=skp, limit=limt)
     for auth in authset:
@@ -681,14 +687,14 @@ def unbis_label(label):
         limt=int(request.args.get('limit'))
     except:
         limt=50
-    print(f"skip is {skp} and limit is {limt}")    
-    query = QueryDocument(
+    #print(f"skip is {skp} and limit is {limt}")    
+    query = Query(
         Condition(
             tag='150',
             subfields={'a': re.compile(str(label).upper())}
             )
     )
-    print(query.to_json())
+    #print(query.to_json())
     dict1={}
     authset = AuthSet.from_query(query, projection={'035':1,'150':1}, skip=skp, limit=limt)
     '''
@@ -746,11 +752,11 @@ def jsons(date):
         limt=int(request.args.get('limit'))
     except:
         limt=50
-    print(f"skip is {skp} and limit is {limt}")    
+    #print(f"skip is {skp} and limit is {limt}")    
     #start_time_all=datetime.now()
     str_date=date.replace('-','')
 
-    print(f"the original str_date is {str_date}")
+    #print(f"the original str_date is {str_date}")
     if len(str_date)!= 8:
         ldate = datetime.now()
         str_date=str(ldate.year)+str(ldate.month)+str(ldate.day)
@@ -816,14 +822,14 @@ def symbols(date):
         limt=int(request.args.get('limit'))
     except:
         limt=50
-    print(f"skip is {skp} and limit is {limt}")
+    #print(f"skip is {skp} and limit is {limt}")
     str_date=date.replace('-','')
-    print(f"the original str_date is {str_date}")
+    #print(f"the original str_date is {str_date}")
 
     if len(str_date)!= 8:
         date = datetime.datetime.now()
         str_date=str(date.year)+str(date.month)+str(date.day)
-    print(f"the str_date is {str_date}")
+    #print(f"the str_date is {str_date}")
     if len(str_date)!= 8:
         ldate = datetime.now()
         str_date=str(ldate.year)+str(ldate.month)+str(ldate.day)
@@ -835,7 +841,7 @@ def symbols(date):
         date_day=str_date[6:8]
     date_from=datetime.strptime(date_year+"-"+date_month+"-"+date_day, "%Y-%m-%d")
         
-    query = QueryDocument(
+    query = Query(
         Condition(
             tag='998',
             subfields={'z': re.compile('^'+str_date)}
@@ -892,7 +898,7 @@ def votes(topic):
     print(f"Country is {cntry}")
     print(f"Vote is {vt}")
 
-    query = QueryDocument(
+    query = Query(
         Condition(
             tag='191',
             subfields={'d': re.compile(str(topic))}
@@ -917,7 +923,7 @@ def votes(topic):
     for key,value in dict_auth_ids.items():
         #sample_id=int(dict_auth_ids['A/74/251'])
         print(f"the id of {key} is {value}")
-        query_bib = QueryDocument(
+        query_bib = Query(
             Condition(
                 tag='991',
                 subfields={'d':int(value)}
