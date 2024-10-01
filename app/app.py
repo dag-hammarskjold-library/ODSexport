@@ -460,7 +460,9 @@ def jsonfga(path):
 @app.route('/ds/<path:path>')
 def show_txt(path):
     ts2=time.time()
-    query = Query.from_string("symbol:"+path) # Dataset-search_query
+    #query = Query.from_string("symbol:"+path) # Dataset-search_query
+    query = Query.from_string("191__a:'"+path+"'") # Dataset-search_query
+
     #query = QueryDocument(
      #   Condition(
      #       tag='191',
