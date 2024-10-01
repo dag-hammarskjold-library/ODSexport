@@ -11,7 +11,7 @@ jobs:
       - name: Set up Python 3.8
         uses: actions/setup-python@v3
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Setting up AWS Credentials
         run: |
           pip install awscli
@@ -29,7 +29,6 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install zappa
-          pip install setuptools
           deactivate
       - name: Deploy with Zappa
         run: | 
