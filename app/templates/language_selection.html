@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Select Language for {{ symbol }}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      text-align: center;
+      padding-top: 50px;
+    }
+    .container {
+      background-color: #fff;
+      width: 400px;
+      margin: 0 auto;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    img {
+      width: 100px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+    }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      background-color: #007bc7;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+    .btn:hover {
+      background-color: #005a9e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="https://www.un.org/sites/un2.un.org/files/2021/06/un-emblem-black.png" alt="United Nations Logo">
+    <h1>{{ symbol }}</h1>
+    {% for lang_code in languages %}
+      <a href="/document1/{{ lang_code }}/{{ symbol }}" class="btn">{{ LANGUAGES[lang_code] }}</a>
+    {% endfor %}
+  </div>
+</body>
+</html>
