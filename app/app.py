@@ -1,5 +1,5 @@
 from posixpath import split
-from flask import Flask, render_template, request, abort, jsonify, Response, url_for
+from flask import Flask, render_template, request, abort, jsonify, Response, url_for, send_file, redirect
 from flask import Flask, render_template, request
 from requests import get
 from bson.objectid import ObjectId
@@ -23,6 +23,7 @@ import requests
 import json
 import ssl
 import certifi
+from io import BytesIO
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -49,6 +50,8 @@ myClient = MongoClient(myMongoURI, tlsCAFile=certifi.where())
 myDatabase=myClient['undlFiles']
 DB.connect(myMongoURI, database='undlFiles')
 collection = myDatabase.bibs
+filesColl=myDatabase.files
+
 #sectionOutput = "itp_sample_output_copy"
 #sectionsCollection=myDatabase[sectionOutput]
 #sectionsCollection=Config.DB.itp_sample_output_copy
@@ -460,8 +463,8 @@ def jsonfga(path):
 @app.route('/ds/<path:path>')
 def show_txt(path):
     ts2=time.time()
-    #query = Query.from_string("symbol:"+path) # Dataset-search_query
-    query = Query.from_string("191__a:'"+path+"'") # Dataset-search_query
+    #query = Query.from_string("symbol:"+'"'+path+'"') # Dataset-search_query
+    query = Query.from_string("191__a:'"+path+"'") # Dataset-search_query f"191__a:'{path}'""
 
     #query = QueryDocument(
      #   Condition(
@@ -982,3 +985,116 @@ def display_tablesc():
     headers = list(data1[0].keys())
     rows = [list(item.values()) for item in data1]
     return render_template('dl1.html', headers=headers, rows=rows)
+
+@app.route('/doc')
+def get_pdf():
+    
+    symbol = request.args.get("symbol")
+    lang = request.args.get("lang")
+    
+    if not symbol or not lang:
+        return jsonify({"error": "Missing symbol or lang parameter"}), 400
+    
+    # Query the database for the document matching criteria
+    document = filesColl.find_one({
+        "identifiers.value": symbol,
+        "languages": lang
+    })
+    
+    if not document or "uri" not in document:
+        return jsonify({"error": "PDF not found"}), 404
+    
+    pdf_uri = document["uri"]
+    print(document)
+    # If the PDF is stored externally, fetch and serve it
+    if pdf_uri.startswith("undl-files.s3.amazonaws.com"):
+        pdf_url = document["uri"]
+        try:
+            response = requests.get("https://"+pdf_url, stream=True)
+            if response.status_code != 200:
+                return jsonify({"error": "Failed to fetch the PDF"}), 502
+
+            return Response(
+                response.iter_content(chunk_size=4096),
+                content_type="application/pdf",
+                headers={
+                    "Content-Disposition": "inline; filename=document.pdf"
+                }
+            )
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        
+
+
+
+
+        # Supported languages (ordered for display)
+LANGUAGES = {
+    'ar': 'العربية',
+    'zh': '中文',
+    'en': 'English',
+    'fr': 'Français',
+    'ru': 'Русский',
+    'es': 'Español'
+}
+LANGUAGESList =['DE', 'AR', 'FR', 'ES', 'RU', 'ZH', 'EN']
+
+#@app.route("/document1/<path:symbol>")
+@app.route("/<lang>/<path:symbol>")
+def show_document1(symbol, lang=None):
+    lang=lang.upper()
+    print(symbol)
+    docs = filesColl.find({"identifiers.value": symbol})
+    languages = [''.join(doc.get("languages")) for doc in docs]
+    print(languages)
+    if lang is None:
+        # Find all documents matching the symbol
+        docs = filesColl.find({"identifiers.value": symbol})
+        languages = [''.join(doc.get("languages")) for doc in docs]
+        
+        if not languages:
+            return "No available languages for this document.", 404
+        return render_template("language_selection.html", symbol=symbol, languages=languages, LANGUAGES=LANGUAGES)
+
+    # Look up the specific document for the given language
+    doc = filesColl.find_one({"identifiers.value": symbol, "languages": lang})
+    if not doc or not doc.get("uri"):
+        return "Document not found for this language.", 404
+
+    # Fetch and serve the PDF
+    uri = "https://"+doc["uri"]
+    response = requests.get(uri)
+    if response.status_code == 200:
+        return send_file(BytesIO(response.content), download_name=f"{symbol}_{lang}.pdf", mimetype='application/pdf')
+    else:
+        return "Unable to fetch PDF", 502
+
+
+@app.route("/document2/<path:symbol>")
+#@app.route("/document1/<path:lang>/<path:symbol>/")
+def show_document2(symbol, lang=None):
+    print(symbol)
+    docs = filesColl.find({"identifiers.value": symbol})
+    languages = [''.join(doc.get("languages")) for doc in docs]
+    print(languages)
+    if lang is None:
+        # Find all documents matching the symbol
+        docs = filesColl.find({"identifiers.value": symbol})
+        languages = [''.join(doc.get("languages")) for doc in docs]
+        
+        if not languages:
+            return "No available languages for this document.", 404
+        return render_template("language_selection.html", symbol=symbol, languages=languages, LANGUAGES=LANGUAGES)
+
+    # Look up the specific document for the given language
+    doc = filesColl.find_one({"identifiers.value": symbol, "languages": languages})
+    if not doc or not doc.get("uri"):
+        return "Document not found for this language.", 404
+
+    # Fetch and serve the PDF
+    uri = "https://"+doc["uri"]
+    response = requests.get(uri)
+    if response.status_code == 200:
+        return send_file(BytesIO(response.content), download_name=f"{symbol}_{lang}.pdf", mimetype='application/pdf')
+    else:
+        return "Unable to fetch PDF", 502
