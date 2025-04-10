@@ -7,6 +7,7 @@ from bson import SON
 from bson.json_util import dumps, loads
 from .config import Config
 from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo.collation import Collation
 import boto3, re, time, os, pymongo
 import os, re
 from flask import send_from_directory
@@ -1044,7 +1045,8 @@ LANGUAGESList =['DE', 'AR', 'FR', 'ES', 'RU', 'ZH', 'EN']
 def show_document1(symbol, lang=None):
     lang=lang.upper()
     print(symbol)
-    docs = filesColl.find({"identifiers.value": symbol})
+    cln = Collation(locale='en', strength=2)
+    docs = filesColl.find({"identifiers.value": symbol}, collation=cln)
     languages = [''.join(doc.get("languages")) for doc in docs]
     print(languages)
     if lang is None:
@@ -1057,7 +1059,7 @@ def show_document1(symbol, lang=None):
         return render_template("language_selection.html", symbol=symbol, languages=languages, LANGUAGES=LANGUAGES)
 
     # Look up the specific document for the given language
-    doc = filesColl.find_one({"identifiers.value": symbol, "languages": lang})
+    doc = filesColl.find_one({"identifiers.value": symbol, "languages": lang}, collation=cln)
     if not doc or not doc.get("uri"):
         return "Document not found for this language.", 404
 
