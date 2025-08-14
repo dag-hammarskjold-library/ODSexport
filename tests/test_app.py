@@ -111,3 +111,33 @@ def test_ds_A_C_4_SR_1139_245__a_contains_15th_session_4th_committee():
             found = False
         assert found, f'No "245__a" key with expected value found in response JSON'
 
+import importlib
+
+def test_python_imports():
+    """
+    Basic smoke test to ensure all main dependencies are importable.
+    Add/remove imports as needed for your requirements.txt.
+    """
+    modules = [
+        "flask",
+        "pytest",
+        "PyPDF2",
+        # add other dependencies here as needed
+    ]
+    for mod in modules:
+        importlib.import_module(mod)
+        assert True, f"Module {mod} could not be imported"
+
+def test_app_loads():
+    """
+    Ensure the Flask app loads and a simple test client can be created.
+    """
+    from app.app import app
+    with app.test_client() as client:
+        response = client.get("/ret234d")
+        # Accept 200 or 404, just ensure the app runs
+        print(f"Response status code: {response.status_code}")
+        assert response.status_code in (200, 404), "App did not load correctly"
+        # If you want to check for a specific route, you can do so here
+        # e.g., response = client.get("/some_route")
+        #assert response.status_code
