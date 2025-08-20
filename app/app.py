@@ -1152,8 +1152,8 @@ def show_list():
     return jsonify(jsonl)
 
 
-@app.route('/multi_list')
-def show_multi_list():
+@app.route('/multi_query')
+def show_multi_query():
     """
     Accepts multiple tag:query pairs as query parameters.
     Example: /multi_list?tag1=191&query1=SR.1139&tag2=245&query2=Committee
@@ -1206,8 +1206,8 @@ def show_multi_list():
         jsonl.append(out_dict)
     return jsonify(jsonl)
 
-@app.route('/multi_list2')
-def show_multi_list2():
+@app.route('/multi_query_partial')
+def show_multi_query_partial():
     """
     Accepts multiple tag:query pairs as query parameters.
     Example: /multi_list?tag1=191&query1=SR.1139&tag2=245&query2=Committee
