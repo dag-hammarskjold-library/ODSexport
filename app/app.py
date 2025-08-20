@@ -1150,3 +1150,117 @@ def show_list():
         #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
     #print(f"total duration was {datetime.now()-start_time_all}")
     return jsonify(jsonl)
+
+
+@app.route('/multi_query')
+def show_multi_query():
+    """
+    Accepts multiple tag:query pairs as query parameters.
+    Example: /multi_list?tag1=191&query1=SR.1139&tag2=245&query2=Committee
+    Returns records matching all tag:query pairs (AND logic).
+    """
+    try:
+        skp = int(request.args.get('skip', 0))
+    except Exception:
+        skp = 0
+    try:
+        limt = int(request.args.get('limit', 50))
+    except Exception:
+        limt = 50
+
+    # Collect all tag:query pairs from the request
+    tags = []
+    queries = []
+    for key in request.args:
+        if key.startswith('tag'):
+            idx = key[3:]
+            tag = request.args.get(key)
+            query_val = request.args.get(f'query{idx}')
+            if tag and query_val:
+                tags.append(tag)
+                queries.append(query_val)
+
+    # Build Query object with AND logic
+    conditions = []
+    for tag, val in zip(tags, queries):
+        conditions.append(Condition(tag=tag, subfields={'a': val}))
+    if not conditions:
+        return jsonify({"error": "No tag:query pairs provided"}), 400
+
+    query = Query(*conditions)
+    bibset = BibSet.from_query(query, skip=skp, limit=limt)
+    out_list = [
+        ('089', 'b'), ('091', 'a'), ('191', 'a'), ('191', 'b'), ('191', 'c'), ('191', '9'),
+        ('239', 'a'), ('245', 'a'), ('245', 'b'), ('245', 'c'), ('249', 'a'), ('260', 'a'),
+        ('260', 'b'), ('260', 'c'), ('269', 'a'), ('300', 'a'), ('500', 'a'), ('515', 'a'),
+        ('520', 'a'), ('596', 'a'), ('598', 'a'), ('610', 'a'), ('611', 'a'), ('630', 'a'),
+        ('650', 'a'), ('651', 'a'), ('710', 'a'), ('830', 'a'), ('981', 'a'), ('989', 'a'), ('989', 'b'),
+        ('989', 'c'), ('991', 'a'), ('991', 'b'), ('991', 'c'), ('991', 'd'), ('992', 'a'),
+        ('993', 'a'), ('996', 'a')
+    ]
+    jsonl = []
+    for bib in bibset.records:
+        out_dict = {}
+        for entry in out_list:
+            out_dict[entry[0] + '__' + entry[1]] = bib.get_values(entry[0], entry[1])
+        jsonl.append(out_dict)
+    return jsonify(jsonl)
+
+@app.route('/multi_query_partial')
+def show_multi_query_partial():
+    """
+    Accepts multiple tag:query pairs as query parameters.
+    Example: /multi_list?tag1=191&query1=SR.1139&tag2=245&query2=Committee
+    Returns records matching all tag:query pairs (AND logic).
+    Partial queries are supported: e.g. query1=E/1981 will match E/1981/55.
+    """
+    import re
+
+    try:
+        skp = int(request.args.get('skip', 0))
+    except Exception:
+        skp = 0
+    try:
+        limt = int(request.args.get('limit', 50))
+    except Exception:
+        limt = 50
+
+    # Collect all tag:query pairs from the request
+    tags = []
+    queries = []
+    for key in request.args:
+        if key.startswith('tag'):
+            idx = key[3:]
+            tag = request.args.get(key)
+            query_val = request.args.get(f'query{idx}')
+            if tag and query_val:
+                tags.append(tag)
+                queries.append(query_val)
+
+    # Build Query object with AND logic, using regex for partial match
+    conditions = []
+    for tag, val in zip(tags, queries):
+        # Use regex to match any value that starts with the query string
+        regex = re.compile(f'^{re.escape(val)}')
+        conditions.append(Condition(tag=tag, subfields={'a': regex}))
+    if not conditions:
+        return jsonify({"error": "No tag:query pairs provided"}), 400
+
+    query = Query(*conditions)
+    bibset = BibSet.from_query(query, skip=skp, limit=limt)
+    out_list = [
+        ('089', 'b'), ('091', 'a'), ('191', 'a'), ('191', 'b'), ('191', 'c'), ('191', '9'),
+        ('239', 'a'), ('245', 'a'), ('245', 'b'), ('245', 'c'), ('249', 'a'), ('260', 'a'),
+        ('260', 'b'), ('260', 'c'), ('269', 'a'), ('300', 'a'), ('500', 'a'), ('515', 'a'),
+        ('520', 'a'), ('596', 'a'), ('598', 'a'), ('610', 'a'), ('611', 'a'), ('630', 'a'),
+        ('650', 'a'), ('651', 'a'), ('710', 'a'), ('830', 'a'), ('981', 'a'), ('989', 'a'), ('989', 'b'),
+        ('989', 'c'), ('991', 'a'), ('991', 'b'), ('991', 'c'), ('991', 'd'), ('992', 'a'),
+        ('993', 'a'), ('996', 'a')
+    ]
+    jsonl = []
+    for bib in bibset.records:
+        out_dict = {}
+        for entry in out_list:
+            out_dict[entry[0] + '__' + entry[1]] = bib.get_values(entry[0], entry[1])
+        jsonl.append(out_dict)
+    return jsonify(jsonl)
