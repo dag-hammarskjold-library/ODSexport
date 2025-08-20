@@ -1241,8 +1241,70 @@ def show_multi_query_partial():
     conditions = []
     for tag, val in zip(tags, queries):
         # Use regex to match any value that starts with the query string
-        regex = re.compile(f'^{re.escape(val)}')
+        regex = re.compile(f'{re.escape(val)}')
         conditions.append(Condition(tag=tag, subfields={'a': regex}))
+    if not conditions:
+        return jsonify({"error": "No tag:query pairs provided"}), 400
+
+    query = Query(*conditions)
+    bibset = BibSet.from_query(query, skip=skp, limit=limt)
+    out_list = [
+        ('089', 'b'), ('091', 'a'), ('191', 'a'), ('191', 'b'), ('191', 'c'), ('191', '9'),
+        ('239', 'a'), ('245', 'a'), ('245', 'b'), ('245', 'c'), ('249', 'a'), ('260', 'a'),
+        ('260', 'b'), ('260', 'c'), ('269', 'a'), ('300', 'a'), ('500', 'a'), ('515', 'a'),
+        ('520', 'a'), ('596', 'a'), ('598', 'a'), ('610', 'a'), ('611', 'a'), ('630', 'a'),
+        ('650', 'a'), ('651', 'a'), ('710', 'a'), ('830', 'a'), ('981', 'a'), ('989', 'a'), ('989', 'b'),
+        ('989', 'c'), ('991', 'a'), ('991', 'b'), ('991', 'c'), ('991', 'd'), ('992', 'a'),
+        ('993', 'a'), ('996', 'a')
+    ]
+    jsonl = []
+    for bib in bibset.records:
+        out_dict = {}
+        for entry in out_list:
+            out_dict[entry[0] + '__' + entry[1]] = bib.get_values(entry[0], entry[1])
+        jsonl.append(out_dict)
+    return jsonify(jsonl)
+
+@app.route('/multi_query_partial_subfield')
+def show_multi_query_partial_subfield():
+    """
+    Accepts multiple tag:query pairs as query parameters.
+    Example: /multi_query_partial?tag1=191&query1=E/1981&subfield1=a&tag2=245&query2=Committee&subfield2=b
+    Returns records matching all tag:query pairs (AND logic).
+    Partial queries are supported: e.g. query1=E/1981 will match E/1981/55.
+    You can specify subfieldN for each tagN/queryN (defaults to 'a' if not provided).
+    """
+    import re
+
+    try:
+        skp = int(request.args.get('skip', 0))
+    except Exception:
+        skp = 0
+    try:
+        limt = int(request.args.get('limit', 50))
+    except Exception:
+        limt = 50
+
+    # Collect all tag:query pairs and subfields from the request
+    tags = []
+    queries = []
+    subfields = []
+    for key in request.args:
+        if key.startswith('tag'):
+            idx = key[3:]
+            tag = request.args.get(key)
+            query_val = request.args.get(f'query{idx}')
+            subfield_val = request.args.get(f'subfield{idx}', 'a')
+            if tag and query_val:
+                tags.append(tag)
+                queries.append(query_val)
+                subfields.append(subfield_val)
+
+    # Build Query object with AND logic, using regex for partial match and any subfield
+    conditions = []
+    for tag, val, subf in zip(tags, queries, subfields):
+        regex = re.compile(f'{re.escape(val)}')
+        conditions.append(Condition(tag=tag, subfields={subf: regex}))
     if not conditions:
         return jsonify({"error": "No tag:query pairs provided"}), 400
 
