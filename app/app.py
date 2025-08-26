@@ -1265,11 +1265,79 @@ def show_multi_query_partial():
         jsonl.append(out_dict)
     return jsonify(jsonl)
 
+
+
+import jwt
+from functools import wraps
+from flask import request, jsonify
+
+# Secret key for JWT (should be kept safe in production)
+JWT_SECRET = "ODS-eXport"
+JWT_ALGORITHM = "HS256"
+
+def jwt_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.cookies.get("access_token")
+        if not token:
+            return jsonify({"error": "Missing token"}), 401
+        try:
+            jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+from werkzeug.security import check_password_hash
+
+@app.route('/login', methods=['POST', 'GET'])
+def login():
+    username = os.environ.get("lib_user")
+    password = os.environ.get("lib_password")
+    JWT_SECRET ="your-jwt-secret"
+    if not username or not password:
+        return jsonify({"error": "lib_user and lib_password env. vars required"}), 400
+    aws_client=client = boto3.client('ssm')
+    uat_connect_string=aws_client.get_parameter(Name='uatISSU-admin-connect-string')['Parameter']['Value']
+    client = MongoClient(uat_connect_string)
+    db = client["DynamicListings"]  # use your actual database name
+    users_collection = db["dl_users_collection"]
+    user = users_collection.find_one({"email": username})
+    if not user or not check_password_hash(user.get("password", ""), password):
+        return jsonify({"error": "Invalid credentials"}), 401
+    
+    #jwt_secret is stored for accessing custom secret per application
+    JWT_SECRET=user.get("ods_export_jwt_secret", JWT_SECRET)
+    # Issue JWT token as before...
+    import jwt, datetime
+    from flask import make_response
+    payload = {
+        "user": username,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    resp = make_response(jsonify({"message": "Logged in"}))
+    resp.set_cookie(
+        "access_token", 
+        token, 
+        httponly=True,  # JS cannot read it
+        secure=True,    # send only over HTTPS
+        samesite="Strict"
+    )
+    return resp
+
+
+
+
+
 @app.route('/multi_query_partial_subfield')
+@jwt_required
 def show_multi_query_partial_subfield():
     """
     Accepts multiple tag:query pairs as query parameters.
-    Example: /multi_query_partial?tag1=191&query1=E/1981&subfield1=a&tag2=245&query2=Committee&subfield2=b
+    Example: /multi_query_partial_subfield?tag1=191&query1=E/1981&subfield1=a&tag2=245&query2=Committee&subfield2=b
     Returns records matching all tag:query pairs (AND logic).
     Partial queries are supported: e.g. query1=E/1981 will match E/1981/55.
     You can specify subfieldN for each tagN/queryN (defaults to 'a' if not provided).

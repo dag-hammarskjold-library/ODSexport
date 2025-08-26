@@ -2,3 +2,4 @@ dlx @ git+https://github.com/dag-hammarskjold-library/dlx
 Flask
 pymongo
 requests
+PyJWT
