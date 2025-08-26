@@ -1333,7 +1333,7 @@ def login():
 
 
 @app.route('/multi_query_partial_subfield')
-@jwt_required
+#@jwt_required
 def show_multi_query_partial_subfield():
     """
     Accepts multiple tag:query pairs as query parameters.
