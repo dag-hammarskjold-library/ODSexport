@@ -1,4 +1,4 @@
-dlx @ git+https://github.com/dag-hammarskjold-library/dlx
+dlx @ git+https://github.com/dag-hammarskjold-library/dlx@v1.4.22.2
 Flask
 pymongo
 requests
