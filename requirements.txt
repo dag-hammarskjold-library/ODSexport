@@ -1,4 +1,5 @@
 dlx @ git+https://github.com/dag-hammarskjold-library/dlx@v1.4.22.2
-Flask==3.1.1
-pymongo==4.10.1
-requests==2.32.3
+Flask
+pymongo
+requests
+PyJWT
