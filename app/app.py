@@ -1118,7 +1118,7 @@ def show_list():
     query=request.args.get('query')
     ts2=time.time()
     #query = Query.from_string("symbol:"+'"'+path+'"') # Dataset-search_query
-    print(f"{tag}+':'+{query}")
+    print(f"{tag}:{query}")
     query1 = Query.from_string(f"{tag}:{query}") # Dataset-search_query f"191__a:'{path}'""
 
     #query = QueryDocument(
@@ -1131,7 +1131,7 @@ def show_list():
     #print(f" the imp query is  -- {query.to_json()}")
     #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     bibset = BibSet.from_query(query1,skip=skp, limit=limt)
-    out_list=[('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list=[('001',''),('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     #print(f"time for query is {time.time()-ts2}")
     jsonl=[]
@@ -1142,9 +1142,16 @@ def show_list():
         #start_time_bib=datetime.now()
         for entry in out_list:
             #start_time_field=datetime.now()
-            out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
+            if entry[1]=='':
+                out_dict[entry[0]]=bib.id
+            else:
+                out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
             #print(f"for the field {entry[0]+'__'+entry[1]}")
             #print(f"duration for getting values was {datetime.now()-start_time_field}")
+            
+
+
+
         jsonl.append(out_dict)
         #print(f"for the bib {bib.get_values('191','a')}")
         #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
@@ -1377,6 +1384,7 @@ def show_multi_query_partial_subfield():
         return jsonify({"error": "No tag:query pairs provided"}), 400
 
     query = Query(*conditions)
+    print(query.to_json())
     bibset = BibSet.from_query(query, skip=skp, limit=limt)
     out_list = [
         ('089', 'b'), ('091', 'a'), ('191', 'a'), ('191', 'b'), ('191', 'c'), ('191', '9'),
@@ -1385,12 +1393,15 @@ def show_multi_query_partial_subfield():
         ('520', 'a'), ('596', 'a'), ('598', 'a'), ('610', 'a'), ('611', 'a'), ('630', 'a'),
         ('650', 'a'), ('651', 'a'), ('710', 'a'), ('830', 'a'), ('981', 'a'), ('989', 'a'), ('989', 'b'),
         ('989', 'c'), ('991', 'a'), ('991', 'b'), ('991', 'c'), ('991', 'd'), ('992', 'a'),
-        ('993', 'a'), ('996', 'a')
+        ('993', 'a'), ('996', 'a'),('001','')
     ]
     jsonl = []
     for bib in bibset.records:
         out_dict = {}
         for entry in out_list:
-            out_dict[entry[0] + '__' + entry[1]] = bib.get_values(entry[0], entry[1])
+            if entry[1]!='':
+                out_dict[entry[0] + '__' + entry[1]] = bib.get_values(entry[0], entry[1])
+            else:
+                out_dict[entry[0]] = bib.id
         jsonl.append(out_dict)
     return jsonify(jsonl)
