@@ -1115,13 +1115,13 @@ def show_list():
     print(f"skip is {skp} and limit is {limt}")
     
     tag=request.args.get('tag')
-    query=request.args.get('query')
-    ts2=time.time()
+    query1=request.args.get('query')
     #query = Query.from_string("symbol:"+'"'+path+'"') # Dataset-search_query
-    print(f"{tag}:{query}")
-    query1 = Query.from_string(f"{tag}:{query}") # Dataset-search_query f"191__a:'{path}'""
-
-    #query = QueryDocument(
+    print(f"{tag}:{query1}")
+    query1 = Query.from_string(f"{tag}:{query1}") # Dataset-search_query f"191__a:'{path}'""
+    sort_field = request.args.get('sort', '269')  # default sort field
+    sort_direction = request.args.get('dir', 'desc').lower()
+    #query = QueryDocument(  
      #   Condition(
      #       tag='191',
      #       #subfields={'a': re.compile('^'+path+'$')}
@@ -1130,7 +1130,8 @@ def show_list():
     #)
     #print(f" the imp query is  -- {query.to_json()}")
     #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
-    bibset = BibSet.from_query(query1,skip=skp, limit=limt)
+    sort_direction = -1 if sort_direction == 'desc' else 1
+    bibset = BibSet.from_query(query1,sort={sort_field:sort_direction},skip=skp, limit=limt)
     out_list=[('001',''),('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     #print(f"time for query is {time.time()-ts2}")
@@ -1138,7 +1139,84 @@ def show_list():
     #print(f"time for query is {time.time()-ts2}")
     for bib in bibset.records:
         
-        out_dict={}
+        out_dict={} 
+        #start_time_bib=datetime.now()
+        for entry in out_list:
+            #start_time_field=datetime.now()
+            if entry[1]=='':
+                out_dict[entry[0]]=bib.id
+            else:
+                out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
+            #print(f"for the field {entry[0]+'__'+entry[1]}")
+            #print(f"duration for getting values was {datetime.now()-start_time_field}")
+            
+
+
+
+        jsonl.append(out_dict)
+        #print(f"for the bib {bib.get_values('191','a')}")
+        #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
+    #print(f"total duration was {datetime.now()-start_time_all}")
+    return jsonify(jsonl)
+
+@app.route('/list30')
+def show_list30():
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50 
+    print(f"skip is {skp} and limit is {limt}")
+    
+    tag=request.args.get('tag')
+    query=request.args.get('query')
+    sort_field = request.args.get('sort', '269')  # default sort field
+    sort_direction = request.args.get('dir', 'desc').lower()
+    #query = QueryDocument(  
+     #   Condition(
+     #       tag='191',
+     #       #subfields={'a': re.compile('^'+path+'$')}
+     #       subfields={'a': path}
+     #   )
+    #)
+    #print(f" the imp query is  -- {query.to_json()}")
+    #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
+    # filter to records updated in the last 30 days
+    date_threshold = datetime.utcnow() - timedelta(days=30)
+
+    # Build a Mongo-style dict query that includes the updated threshold.
+    dict_query = {"created": {"$gte": date_threshold}}
+
+    # If query param looks like tag__subfield:value (API style), parse and add to dict_query
+    if query and '__' in query and ':' in query:
+        try:
+            tag_subfield, val = query.split(':', 1)
+            tag, subf = tag_subfield.split('__', 1)
+            val = val.strip().strip('"\'')
+            # support trailing wildcard '*'
+            if val.endswith('*'):
+                pattern = re.compile('^' + re.escape(val[:-1]))
+                dict_query[f"{tag}.subfields.value"] = pattern
+            else:
+                dict_query[f"{tag}.subfields.value"] = val
+        except Exception:
+            # fall back to leaving dict_query as-is (only date filter)
+            pass
+
+    # convert sort direction to pymongo sort order
+    sort_dir = -1 if sort_direction == 'desc' else 1
+    bibset = BibSet.from_query(dict_query, sort={sort_field: sort_dir}, skip=skp, limit=limt)
+    out_list=[('001',''),('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
+    #print(f"duration for query was {datetime.now()-start_time_query}")
+    #print(f"time for query is {time.time()-ts2}")
+    jsonl=[]
+    #print(f"time for query is {time.time()-ts2}")
+    for bib in bibset.records:
+        
+        out_dict={} 
         #start_time_bib=datetime.now()
         for entry in out_list:
             #start_time_field=datetime.now()
