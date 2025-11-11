@@ -1175,6 +1175,8 @@ def show_list30():
     query=request.args.get('query')
     sort_field = request.args.get('sort', '269')  # default sort field
     sort_direction = request.args.get('dir', 'desc').lower()
+    days=request.args.get('days', '30')
+    last=request.args.get('last', 'created')  # default to created date
     #query = QueryDocument(  
      #   Condition(
      #       tag='191',
@@ -1185,10 +1187,10 @@ def show_list30():
     #print(f" the imp query is  -- {query.to_json()}")
     #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
     # filter to records updated in the last 30 days
-    date_threshold = datetime.utcnow() - timedelta(days=30)
+    date_threshold = datetime.utcnow() - timedelta(days=int(days))
 
     # Build a Mongo-style dict query that includes the updated threshold.
-    dict_query = {"created": {"$gte": date_threshold}}
+    dict_query = {last: {"$gte": date_threshold}}
 
     # If query param looks like tag__subfield:value (API style), parse and add to dict_query
     if query and '__' in query and ':' in query:
@@ -1196,9 +1198,13 @@ def show_list30():
             tag_subfield, val = query.split(':', 1)
             tag, subf = tag_subfield.split('__', 1)
             val = val.strip().strip('"\'')
+            #print([hex(ord(c)) for c in val])
             # support trailing wildcard '*'
             if val.endswith('*'):
-                pattern = re.compile('^' + re.escape(val[:-1]))
+                #pattern = re.compile(r'^' + re.escape(val[:-1]))
+                normal = val.replace('⁄', '/')
+                pattern = re.compile(r'^' + re.escape(normal[:-1]))
+                print(f"pattern is {pattern}")
                 dict_query[f"{tag}.subfields.value"] = pattern
             else:
                 dict_query[f"{tag}.subfields.value"] = val
@@ -1208,8 +1214,9 @@ def show_list30():
 
     # convert sort direction to pymongo sort order
     sort_dir = -1 if sort_direction == 'desc' else 1
+    print(f" the dict query is  -- {dict_query}")
     bibset = BibSet.from_query(dict_query, sort={sort_field: sort_dir}, skip=skp, limit=limt)
-    out_list=[('001',''),('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list=[('001',''),('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('791','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
     #print(f"duration for query was {datetime.now()-start_time_query}")
     #print(f"time for query is {time.time()-ts2}")
     jsonl=[]
