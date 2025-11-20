@@ -38,7 +38,8 @@
     - marcxml for the symbol ( e.g. /xml/A/RES/77/1)
 8. /list/\<query\>
     - parameters are tag, query
-    - sorting 269 by default
-    - 
- 9. /\<lan code\>symbol
+    - sorting 269 by default in descending order
+      (e.g. /list?tag=191&query=A/RES/)
+ 9. /\<lang code\>/symbol ; lang code = AR|EN|ES|FR|RU|ZH
+      (e.g. /zh/A/RES/79/1)
   
