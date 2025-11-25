@@ -25,6 +25,7 @@ import json
 import ssl
 import certifi
 from io import BytesIO
+from urllib.parse import quote, unquote
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
@@ -1045,6 +1046,8 @@ LANGUAGESList =['DE', 'AR', 'FR', 'ES', 'RU', 'ZH', 'EN']
 def show_document1(symbol, lang=None):
     lang=lang.upper()
     print(symbol)
+    symbol=unquote(symbol)
+    print(f"after unquote the symbol is {symbol}")
     cln = Collation(locale='en', strength=2)
     docs = filesColl.find({"identifiers.value": symbol}, collation=cln)
     languages = [''.join(doc.get("languages")) for doc in docs]
@@ -1058,12 +1061,14 @@ def show_document1(symbol, lang=None):
             return "No available languages for this document.", 404
         return render_template("language_selection.html", symbol=symbol, languages=languages, LANGUAGES=LANGUAGES)
 
-    # Look up the specific document for the given language
+    # Look up the specific document for  the given language
     doc = filesColl.find_one({"identifiers.value": symbol, "languages": lang}, collation=cln)
     if not doc or not doc.get("uri"):
         return "Document not found for this language.", 404
 
     # Fetch and serve the PDF
+    symbol=quote(symbol, safe='')
+    print(symbol)
     uri = "https://"+doc["uri"]
     response = requests.get(uri)
     if response.status_code == 200:
