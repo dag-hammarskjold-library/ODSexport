@@ -1046,7 +1046,7 @@ LANGUAGESList =['DE', 'AR', 'FR', 'ES', 'RU', 'ZH', 'EN']
 def show_document1(symbol, lang=None):
     lang=lang.upper()
     print(symbol)
-    symbol=unquote(symbol)
+    #symbol=unquote(symbol)
     print(f"after unquote the symbol is {symbol}")
     cln = Collation(locale='en', strength=2)
     docs = filesColl.find({"identifiers.value": symbol}, collation=cln)
@@ -1067,7 +1067,7 @@ def show_document1(symbol, lang=None):
         return "Document not found for this language.", 404
 
     # Fetch and serve the PDF
-    symbol=quote(symbol, safe='')
+    symbol=quote(symbol, safe='/')
     print(symbol)
     uri = "https://"+doc["uri"]
     response = requests.get(uri)
