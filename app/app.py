@@ -29,6 +29,61 @@ from urllib.parse import quote, unquote
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
+def _parse_out_list_param(param):
+    """Parse `fields`/`out_list` query param into list of (tag, subfield) tuples.
+    Accepts JSON list (e.g. ["245:a","269:a"] or [["245","a"],...]) or
+    comma-separated string "245:a,269:a" or values like "001".
+    Returns None when param is falsy.
+    """
+    if not param:
+        return ""
+    # try JSON
+    try:
+        parsed = json.loads(param)
+        out = []
+        if isinstance(parsed, list):
+            for item in parsed:
+                if isinstance(item, (list, tuple)) and len(item) >= 2:
+                    out.append((str(item[0]), str(item[1])))
+                elif isinstance(item, str):
+                    if ':' in item:
+                        tag, sub = item.split(':', 1)
+                    elif '__' in item:
+                        tag, sub = item.split('__', 1)
+                    else:
+                        tag, sub = item, ''
+                    out.append((tag, sub))
+        if out:
+            return out
+    except Exception:
+        pass
+
+    # fallback to comma-separated string
+    out = []
+    for part in str(param).split(','):
+        p = part.strip()
+        if not p:
+            continue
+        if ':' in p:
+            tag, sub = p.split(':', 1)
+        elif '__' in p:
+            tag, sub = p.split('__', 1)
+        else:
+            tag, sub = p, ''
+        out.append((tag, sub))
+    return out
+
+
+def _get_out_list(default):
+    """Return parsed out_list from request args or the provided default."""
+    try:
+        param = request.args.get('out_list')
+    except Exception:
+        param = None
+    parsed = _parse_out_list_param(param)
+    return parsed if parsed is not None else default
+
+
 '''
 simple test URLs
 /20200707/xml?skip=10&limit=35
@@ -388,6 +443,9 @@ def jsonf(date):
     for bib in bibset.records:
         jsonl.append(bib.to_json())
     return jsonify(jsonl)
+
+
+
 
 
 
@@ -1042,11 +1100,21 @@ LANGUAGES = {
 LANGUAGESList =['DE', 'AR', 'FR', 'ES', 'RU', 'ZH', 'EN']
 
 #@app.route("/document1/<path:symbol>")
+
+
+
+
+
+
+
+s3 = boto3.client("s3")
+
 @app.route("/<lang>/<path:symbol>")
 def show_document1(symbol, lang=None):
+    
     lang=lang.upper()
     print(symbol)
-    #symbol=unquote(symbol)
+    symbol=unquote(symbol)
     print(f"after unquote the symbol is {symbol}")
     cln = Collation(locale='en', strength=2)
     docs = filesColl.find({"identifiers.value": symbol}, collation=cln)
@@ -1067,14 +1135,26 @@ def show_document1(symbol, lang=None):
         return "Document not found for this language.", 404
 
     # Fetch and serve the PDF
-    symbol=quote(symbol, safe='/')
+    #symbol=quote(symbol, safe='/')
     print(symbol)
-    uri = "https://"+doc["uri"]
-    response = requests.get(uri)
-    if response.status_code == 200:
-        return send_file(BytesIO(response.content), download_name=f"{symbol}_{lang}.pdf", mimetype='application/pdf')
-    else:
-        return "Unable to fetch PDF", 502
+    presigned_url = s3.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': 'undl-files', 'Key': doc['uri'].split('/')[1]},
+        ExpiresIn=36
+    )
+    return {
+        "statusCode": 302,
+        "headers": {
+            "Location": presigned_url
+        }
+    }
+    
+    #uri = "https://"+doc["uri"]
+    #response = requests.get(uri)
+    #if response.status_code == 200:
+    #    return send_file(BytesIO(response.content), download_name=f"{symbol}_{lang}.pdf", mimetype='application/pdf')
+    #else:
+    #    return "Unable to fetch PDF", 502
 
 
 @app.route("/document2/<path:symbol>")
@@ -1182,6 +1262,7 @@ def show_list30():
     sort_direction = request.args.get('dir', 'desc').lower()
     days=request.args.get('days', '30')
     last=request.args.get('last', 'created')  # default to created date
+    
     #query = QueryDocument(  
      #   Condition(
      #       tag='191',
@@ -1246,6 +1327,83 @@ def show_list30():
         #print(f"for the bib {bib.get_values('191','a')}")
         #print(f"duration for getting bib values was {datetime.now()-start_time_bib}")
     #print(f"total duration was {datetime.now()-start_time_all}")
+    return jsonify(jsonl)
+
+
+@app.route('/list50')
+def show_list50():
+    """Same as `/list30` but supports `out_list` query parameter to override output fields.
+    Defaults follow the `/list` endpoint.
+    """
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50 
+    print(f"skip is {skp} and limit is {limt}")
+    
+    tag=request.args.get('tag')
+    query=request.args.get('query')
+    sort_field = request.args.get('sort', '269')  # default sort field
+    sort_direction = request.args.get('dir', 'desc').lower()
+    days=request.args.get('days', '30')
+    last=request.args.get('last', 'created')  # default to created date
+    
+    #query = QueryDocument(  
+     #   Condition(
+     #       tag='191',
+     #       #subfields={'a': re.compile('^'+path+'$')}
+     #       subfields={'a': path}
+     #   )
+    #)
+    #print(f" the imp query is  -- {query.to_json()}")
+    #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
+    # filter to records updated in the last 30 days
+    date_threshold = datetime.utcnow() - timedelta(days=int(days))
+
+    # Build a Mongo-style dict query that includes the updated threshold.
+    dict_query = {last: {"$gte": date_threshold}}
+
+    # If query param looks like tag__subfield:value (API style), parse and add to dict_query
+    if query and '__' in query and ':' in query:
+        try:
+            tag_subfield, val = query.split(':', 1)
+            tag, subf = tag_subfield.split('__', 1)
+            val = val.strip().strip('"\'')
+            #print([hex(ord(c)) for c in val])
+            # support trailing wildcard '*'
+            if val.endswith('*'):
+                #pattern = re.compile(r'^' + re.escape(val[:-1]))
+                normal = val.replace('⁄', '/')
+                pattern = re.compile(r'^' + re.escape(normal[:-1]))
+                print(f"pattern is {pattern}")
+                dict_query[f"{tag}.subfields.value"] = pattern
+            else:
+                dict_query[f"{tag}.subfields.value"] = val
+        except Exception:
+            # fall back to leaving dict_query as-is (only date filter)
+            pass
+
+    # convert sort direction to pymongo sort order
+    sort_dir = -1 if sort_direction == 'desc' else 1
+    print(f" the dict query is  -- {dict_query}")
+    bibset = BibSet.from_query(dict_query, sort=[(sort_field, sort_dir)], skip=skp, limit=limt)
+
+    _default_out = [('001',''),('089','b'),('091','a'),('191','a'),('191','b'),('191','c'),('191','9'),('239','a'),('245','a'),('245','b'),('245','c'),('249','a'),('260','a'),('260','b'),('260','c'),('269','a'),('300','a'),('500','a'),('515','a'),('520','a'),('596','a'),('598','a'),('610','a'),('611','a'),('630','a'),('650','a'),('651','a'),('710','a'),('981','a'),('989','a'),('989','b'),('989','c'),('991','a'),('991','b'),('991','c'),('991','d'),('992','a'),('993','a'),('996','a')]
+    out_list = _get_out_list(_default_out)
+
+    jsonl=[]
+    for bib in bibset.records:
+        out_dict={} 
+        for entry in out_list:
+            if entry[1]=='':
+                out_dict[entry[0]]=bib.id
+            else:
+                out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
+        jsonl.append(out_dict)
     return jsonify(jsonl)
 
 
