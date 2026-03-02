@@ -1365,8 +1365,8 @@ def show_list50():
     date_threshold = datetime.utcnow() - timedelta(days=int(days))
 
     # Build a Mongo-style dict query that includes the updated threshold.
-    dict_query = {last: {"$gte": date_threshold}}
-
+    #dict_query = {last: {"$gte": date_threshold}}
+    dict_query = {}
     # If query param looks like tag__subfield:value (API style), parse and add to dict_query
     if query and '__' in query and ':' in query:
         try:
@@ -1405,6 +1405,85 @@ def show_list50():
                 out_dict[entry[0]+'__'+entry[1]]=bib.get_values(entry[0],entry[1])
         jsonl.append(out_dict)
     return jsonify(jsonl)
+
+
+@app.route('/list51')
+def show_list51():
+    """Same as `/list50` but supports `out_list` query parameter to override output fields.
+    Defaults follow the `/list` endpoint.
+    """
+    try:
+        skp=int(request.args.get('skip'))
+    except:
+        skp=0
+    try:
+        limt=int(request.args.get('limit'))
+    except:
+        limt=50 
+    print(f"skip is {skp} and limit is {limt}")
+    
+    tag=request.args.get('tag')
+    query=request.args.get('query')
+    sort_field = request.args.get('sort', '269')  # default sort field
+    sort_direction = request.args.get('dir', 'desc').lower()
+    days=request.args.get('days', '30')
+    last=request.args.get('last', 'created')  # default to created date
+    
+    #query = QueryDocument(  
+     #   Condition(
+     #       tag='191',
+     #       #subfields={'a': re.compile('^'+path+'$')}
+     #       subfields={'a': path}
+     #   )
+    #)
+    #print(f" the imp query is  -- {query.to_json()}")
+    #export_fields={'089':1,'091':1,'191': 1,'239':1,'245':1,'249':1,'260':1,'269':1,'300':1,'500':1,'515':1,'520':1,'596':1,'598':1,'610':1,'611':1,'630:1,''650':1,'651':1,'710':1,'981':1,'989':1,'991':1,'992':1,'993':1,'996':1}
+    # filter to records updated in the last 30 days
+    date_threshold = datetime.utcnow() - timedelta(days=int(days))
+
+    # Build a Mongo-style dict query that includes the updated threshold.
+    #dict_query = {last: {"$gte": date_threshold}}
+    dict_query = {'989.subfields.value': 'Voting Data'}
+    # If query param looks like tag__subfield:value (API style), parse and add to dict_query
+    if query and '__' in query and ':' in query:
+        try:
+            tag_subfield, val = query.split(':', 1)
+            tag, subf = tag_subfield.split('__', 1)
+            val = val.strip().strip('"\'')
+            #print([hex(ord(c)) for c in val])
+            # support trailing wildcard '*'
+            if val.endswith('*'):
+                #pattern = re.compile(r'^' + re.escape(val[:-1]))
+                normal = val.replace('⁄', '/')
+                pattern = re.compile(r'^' + re.escape(normal[:-1]))
+                print(f"pattern is {pattern}")
+                dict_query[f"{tag}.subfields.value"] = pattern
+            else:
+                dict_query[f"{tag}.subfields.value"] = val
+        except Exception:
+            # fall back to leaving dict_query as-is (only date filter)
+            pass
+
+    # convert sort direction to pymongo sort order
+    sort_dir = -1 if sort_direction == 'desc' else 1
+    print(f" the dict query is  -- {dict_query}")
+    bibset = BibSet.from_query(dict_query, sort=[(sort_field, sort_dir)], skip=skp, limit=limt)
+
+   # Return full bibset serialized as MARCXML
+    xml = bibset.to_xml()
+    # bibset.to_xml() may return bytes; ensure we have a str for replace
+    try:
+        if isinstance(xml, bytes):
+            xml = xml.decode('utf-8')
+    except Exception:
+        pass
+    try:
+        xml = xml.replace("  ", " ")
+    except Exception:
+        pass
+    return Response(xml, mimetype='text/xml')
+
+
 
 
 @app.route('/multi_query')
